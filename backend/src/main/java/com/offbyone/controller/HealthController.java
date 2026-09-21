@@ -8,6 +8,6 @@ import java.util.Map;
 public class HealthController {
     @GetMapping("/health")
     public Map<String, String> health() {
-        return Map.of("status", "ok", "version", "v8");
+        return Map.of("status", "ok", "build", "v9-antmatcher");
     }
 }
