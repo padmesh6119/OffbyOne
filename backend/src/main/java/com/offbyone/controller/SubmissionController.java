@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
@@ -61,11 +62,13 @@ public class SubmissionController {
     }
 
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<?> get(@PathVariable UUID id) {
         return submissionRepo.findById(id).map(s -> ResponseEntity.ok(toDto(s))).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/my")
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> mine(@AuthenticationPrincipal User user) {
         return submissionRepo.findByUserId(user.getId()).stream().map(this::toDto).toList();
     }
