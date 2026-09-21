@@ -3,6 +3,8 @@ package com.offbyone.controller;
 import com.offbyone.judge.JudgeService;
 import com.offbyone.model.*;
 import com.offbyone.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -16,6 +18,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/submissions")
 public class SubmissionController {
+    private static final Logger log = LoggerFactory.getLogger(SubmissionController.class);
     private static final int RATE_LIMIT = 5;
     private static final Duration RATE_WINDOW = Duration.ofSeconds(10);
 
@@ -34,9 +37,7 @@ public class SubmissionController {
 
     @PostMapping
     public ResponseEntity<?> submit(@RequestBody Map<String, String> body, @AuthenticationPrincipal User user) {
-        Long count = redis.opsForValue().increment("ratelimit:submit:" + user.getId());
-        if (count != null && count == 1) redis.expire("ratelimit:submit:" + user.getId(), RATE_WINDOW);
-        if (count != null && count > RATE_LIMIT) return ResponseEntity.status(429).body("Too many submissions, slow down");
+        if (rateLimited(user)) return ResponseEntity.status(429).body("Too many submissions, slow down");
 
         Problem problem = problemRepo.findBySlug(body.get("slug")).orElse(null);
         if (problem == null) return ResponseEntity.badRequest().body("Problem not found");
@@ -79,5 +80,17 @@ public class SubmissionController {
         dto.put("runtimeMs", s.getRuntimeMs());
         dto.put("submittedAt", s.getSubmittedAt());
         return dto;
+    }
+
+    private boolean rateLimited(User user) {
+        String key = "ratelimit:submit:" + user.getId();
+        try {
+            Long count = redis.opsForValue().increment(key);
+            if (count != null && count == 1) redis.expire(key, RATE_WINDOW);
+            return count != null && count > RATE_LIMIT;
+        } catch (RuntimeException e) {
+            log.warn("rate limiter unavailable, allowing submission: {}", e.getMessage());
+            return false;
+        }
     }
 }
