@@ -5,6 +5,7 @@ import com.offbyone.repository.*;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -35,6 +36,7 @@ public class RoomController {
     }
 
     @PostMapping("/{code}/join")
+    @Transactional
     public ResponseEntity<?> join(@PathVariable String code, @AuthenticationPrincipal User user) {
         return roomRepo.findByJoinCode(code).map(r -> {
             addParticipant(r, user);
@@ -44,6 +46,7 @@ public class RoomController {
     }
 
     @GetMapping("/{id}/participants")
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> participants(@PathVariable UUID id) {
         return participantRepo.findByRoomIdOrderByScoreDesc(id).stream()
                 .map(p -> Map.<String, Object>of("userId", p.getUser().getId(), "username", p.getUser().getUsername(), "score", p.getScore()))
@@ -51,6 +54,7 @@ public class RoomController {
     }
 
     @PostMapping("/{id}/problems")
+    @Transactional
     public ResponseEntity<?> assignProblems(@PathVariable UUID id, @RequestBody List<Map<String, Object>> body, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(room -> {
             if (!room.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
@@ -67,6 +71,7 @@ public class RoomController {
     }
 
     @GetMapping("/{id}/problems")
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> roomProblems(@PathVariable UUID id) {
         return roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).stream()
                 .map(rp -> Map.<String, Object>of(
@@ -77,6 +82,7 @@ public class RoomController {
     }
 
     @PostMapping("/{id}/start")
+    @Transactional
     public ResponseEntity<?> start(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(r -> {
             if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
@@ -88,6 +94,7 @@ public class RoomController {
     }
 
     @GetMapping("/{id}/leaderboard")
+    @Transactional(readOnly = true)
     public List<Map<String, Object>> leaderboard(@PathVariable UUID id) {
         List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDesc(id);
         List<Map<String, Object>> result = new ArrayList<>();
