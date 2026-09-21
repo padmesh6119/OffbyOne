@@ -21,9 +21,9 @@ public class AuthController {
 
     @PostMapping("/join")
     public ResponseEntity<?> join(@RequestBody Map<String, String> body) {
-        String username = body.get("username");
-        if (username == null || username.isBlank()) return ResponseEntity.badRequest().body("Username required");
-        username = username.trim();
+        String raw = body.get("username");
+        if (raw == null || raw.isBlank()) return ResponseEntity.badRequest().body("Username required");
+        final String username = raw.trim();
 
         User user = userRepo.findByUsername(username).orElseGet(() -> {
             User u = new User();
