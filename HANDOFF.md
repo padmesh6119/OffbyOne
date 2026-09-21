@@ -67,7 +67,7 @@ Both on Render free tier → **the backend sleeps after 15 min idle; first reque
 | Key | Value / where to get it |
 |---|---|
 | `SUPABASE_DB_PASSWORD` | `<ask Padmesh — Supabase → Settings → Database>` |
-| `JWT_SECRET` | any 32+ char string (currently `<any 32+ char random string>`) |
+| `JWT_SECRET` | any 32+ char random string — must stay stable or all tokens invalidate |
 | `SUPABASE_SERVICE_KEY` | `<ask Padmesh — Supabase → Settings → API → secret key>` |
 | `REDIS_PASSWORD` | **NOT SET** — get from Upstash → database → Token |
 
