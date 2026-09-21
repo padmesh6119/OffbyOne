@@ -1,37 +1,34 @@
 package com.offbyone.model;
 
 import jakarta.persistence.*;
-import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "rooms")
-@Data
 public class Room {
-    @Id
-    @GeneratedValue
-    private UUID id;
-
-    @Column(name = "join_code", unique = true, nullable = false)
-    private String joinCode;
-
-    @Column(nullable = false)
-    private String name;
-
+    @Id @GeneratedValue private UUID id;
+    @Column(name = "join_code", unique = true, nullable = false) private String joinCode;
+    @Column(nullable = false) private String name;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "host_id")
-    private User host;
+    @JoinColumn(name = "host_id") private User host;
+    @Column(nullable = false) private String status = "waiting";
+    @Column(name = "start_time") private LocalDateTime startTime;
+    @Column(name = "end_time") private LocalDateTime endTime;
+    @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
 
-    @Column(nullable = false)
-    private String status = "waiting";
-
-    @Column(name = "start_time")
-    private LocalDateTime startTime;
-
-    @Column(name = "end_time")
-    private LocalDateTime endTime;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    public UUID getId() { return id; }
+    public String getJoinCode() { return joinCode; }
+    public void setJoinCode(String v) { this.joinCode = v; }
+    public String getName() { return name; }
+    public void setName(String v) { this.name = v; }
+    public User getHost() { return host; }
+    public void setHost(User v) { this.host = v; }
+    public String getStatus() { return status; }
+    public void setStatus(String v) { this.status = v; }
+    public LocalDateTime getStartTime() { return startTime; }
+    public void setStartTime(LocalDateTime v) { this.startTime = v; }
+    public LocalDateTime getEndTime() { return endTime; }
+    public void setEndTime(LocalDateTime v) { this.endTime = v; }
+    public LocalDateTime getCreatedAt() { return createdAt; }
 }
