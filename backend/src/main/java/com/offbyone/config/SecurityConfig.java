@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/health")).permitAll()
+                        .requestMatchers(AntPathRequestMatcher.antMatcher("/error")).permitAll()
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/api/auth/**")).permitAll()
                         .requestMatchers(AntPathRequestMatcher.antMatcher("/ws/**")).permitAll()
                         .requestMatchers(AntPathRequestMatcher.antMatcher(org.springframework.http.HttpMethod.OPTIONS, "/**")).permitAll()
