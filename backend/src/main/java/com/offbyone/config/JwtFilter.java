@@ -1,6 +1,6 @@
-package com.codecompete.config;
+package com.offbyone.config;
 
-import com.codecompete.repository.UserRepository;
+import com.offbyone.repository.UserRepository;
 import jakarta.servlet.*;
 import jakarta.servlet.http.*;
 import lombok.RequiredArgsConstructor;

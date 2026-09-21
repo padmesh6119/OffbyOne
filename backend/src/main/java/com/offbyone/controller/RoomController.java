@@ -1,7 +1,7 @@
-package com.codecompete.controller;
+package com.offbyone.controller;
 
-import com.codecompete.model.*;
-import com.codecompete.repository.*;
+import com.offbyone.model.*;
+import com.offbyone.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

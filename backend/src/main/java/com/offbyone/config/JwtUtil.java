@@ -1,4 +1,4 @@
-package com.codecompete.config;
+package com.offbyone.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;

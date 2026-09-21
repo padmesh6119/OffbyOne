@@ -1,6 +1,6 @@
-package com.codecompete.repository;
+package com.offbyone.repository;
 
-import com.codecompete.model.User;
+import com.offbyone.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 import java.util.UUID;

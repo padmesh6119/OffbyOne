@@ -1,8 +1,8 @@
-package com.codecompete.controller;
+package com.offbyone.controller;
 
-import com.codecompete.config.JwtUtil;
-import com.codecompete.model.User;
-import com.codecompete.repository.UserRepository;
+import com.offbyone.config.JwtUtil;
+import com.offbyone.model.User;
+import com.offbyone.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;

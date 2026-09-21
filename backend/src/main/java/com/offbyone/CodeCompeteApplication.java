@@ -1,11 +1,11 @@
-package com.codecompete;
+package com.offbyone;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class CodeCompeteApplication {
+public class OffByOneApplication {
     public static void main(String[] args) {
-        SpringApplication.run(CodeCompeteApplication.class, args);
+        SpringApplication.run(OffByOneApplication.class, args);
     }
 }

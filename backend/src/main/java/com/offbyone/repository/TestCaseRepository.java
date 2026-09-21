@@ -1,6 +1,6 @@
-package com.codecompete.repository;
+package com.offbyone.repository;
 
-import com.codecompete.model.TestCase;
+import com.offbyone.model.TestCase;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.UUID;

@@ -1,4 +1,4 @@
-package com.codecompete.model;
+package com.offbyone.model;
 
 import jakarta.persistence.*;
 import lombok.Data;

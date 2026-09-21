@@ -1,4 +1,4 @@
-package com.codecompete.config;
+package com.offbyone.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

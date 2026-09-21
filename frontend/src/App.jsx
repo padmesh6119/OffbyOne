@@ -10,7 +10,7 @@ function Nav() {
   const token = localStorage.getItem('token');
   return (
     <nav>
-      <Link to="/">CodeCompete</Link>
+      <Link to="/">OffByOne</Link>
       <Link to="/problems">Problems</Link>
       <Link to="/room">Room</Link>
       {token

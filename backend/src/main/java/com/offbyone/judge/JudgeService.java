@@ -1,10 +1,10 @@
-package com.codecompete.judge;
+package com.offbyone.judge;
 
-import com.codecompete.model.Problem;
-import com.codecompete.model.Submission;
-import com.codecompete.model.TestCase;
-import com.codecompete.repository.SubmissionRepository;
-import com.codecompete.repository.TestCaseRepository;
+import com.offbyone.model.Problem;
+import com.offbyone.model.Submission;
+import com.offbyone.model.TestCase;
+import com.offbyone.repository.SubmissionRepository;
+import com.offbyone.repository.TestCaseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;

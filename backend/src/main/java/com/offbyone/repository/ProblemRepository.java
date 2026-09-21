@@ -1,6 +1,6 @@
-package com.codecompete.repository;
+package com.offbyone.repository;
 
-import com.codecompete.model.Problem;
+import com.offbyone.model.Problem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
