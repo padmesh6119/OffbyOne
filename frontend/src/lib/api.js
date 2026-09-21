@@ -15,8 +15,7 @@ async function req(path, options = {}) {
 }
 
 export const api = {
-  register: (body) => req('/api/auth/register', { method: 'POST', body: JSON.stringify(body) }),
-  login: (body) => req('/api/auth/login', { method: 'POST', body: JSON.stringify(body) }),
+  join: (username) => req('/api/auth/join', { method: 'POST', body: JSON.stringify({ username }) }),
   problems: (difficulty) => req('/api/problems' + (difficulty ? `?difficulty=${difficulty}` : '')),
   problem: (slug) => req(`/api/problems/${slug}`),
   samples: (slug) => req(`/api/problems/${slug}/samples`),
