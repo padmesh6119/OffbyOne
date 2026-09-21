@@ -37,6 +37,8 @@ CREATE TABLE rooms (
   status TEXT NOT NULL DEFAULT 'waiting',
   start_time TIMESTAMP,
   end_time TIMESTAMP,
+  problem_count INTEGER NOT NULL DEFAULT 5,
+  duration_minutes INTEGER NOT NULL DEFAULT 30,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

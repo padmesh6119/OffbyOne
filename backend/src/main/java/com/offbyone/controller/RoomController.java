@@ -86,11 +86,28 @@ public class RoomController {
     public ResponseEntity<?> start(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(r -> {
             if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
-            r.setStatus("active"); r.setStartTime(java.time.LocalDateTime.now());
+            if (participantRepo.findByRoomIdOrderByScoreDesc(id).size() < 2)
+                return ResponseEntity.badRequest().<Object>body("Need at least 2 players to start");
+
+            if (roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).isEmpty()) autoAssignProblems(r);
+
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            r.setStatus("active"); r.setStartTime(now); r.setEndTime(now.plusMinutes(r.getDurationMinutes()));
             r = roomRepo.save(r);
             ws.convertAndSend("/topic/room/" + r.getId() + "/lobby", Map.of("event", "started"));
             return ResponseEntity.<Object>ok(r);
         }).orElse(ResponseEntity.notFound().build());
+    }
+
+    private void autoAssignProblems(Room room) {
+        List<Problem> pool = new ArrayList<>(problemRepo.findByIsActiveTrue());
+        Collections.shuffle(pool);
+        int count = Math.min(room.getProblemCount(), pool.size());
+        for (int i = 0; i < count; i++) {
+            RoomProblem rp = new RoomProblem();
+            rp.setRoom(room); rp.setProblem(pool.get(i)); rp.setPoints(100); rp.setSortOrder(i);
+            roomProblemRepo.save(rp);
+        }
     }
 
     @GetMapping("/{id}/leaderboard")

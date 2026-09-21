@@ -15,6 +15,8 @@ public class Room {
     @Column(nullable = false) private String status = "waiting";
     @Column(name = "start_time") private LocalDateTime startTime;
     @Column(name = "end_time") private LocalDateTime endTime;
+    @Column(name = "problem_count") private int problemCount = 5;
+    @Column(name = "duration_minutes") private int durationMinutes = 30;
     @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
 
     public UUID getId() { return id; }
@@ -30,5 +32,9 @@ public class Room {
     public void setStartTime(LocalDateTime v) { this.startTime = v; }
     public LocalDateTime getEndTime() { return endTime; }
     public void setEndTime(LocalDateTime v) { this.endTime = v; }
+    public int getProblemCount() { return problemCount; }
+    public void setProblemCount(int v) { this.problemCount = v; }
+    public int getDurationMinutes() { return durationMinutes; }
+    public void setDurationMinutes(int v) { this.durationMinutes = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }
