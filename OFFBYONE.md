@@ -35,26 +35,35 @@ Competitive coding platform. Solo practice + multiplayer rooms. Submit code, get
 ## In Progress
 
 - [ ] Render build passing (Lombok removed, plain Java getters/setters — latest push `82b631e`)
+- [ ] Frontend competitive UI pass
 
 ---
 
 ## To Do
 
 ### Backend
-- [ ] Verify Render deploy succeeds
-- [ ] Add problem seeding (insert a few problems + test cases via API to test end-to-end)
-- [ ] Rate limiting on `/api/submissions` (prevent spam judging)
-- [ ] Room problem assignment (link specific problems to a room before starting)
+- [x] Verify Render deploy succeeds — was actually broken: final Docker stage was JRE-only, no `javac`/`g++`/`python3`, every submission returned CE/RE. Fixed (`backend/Dockerfile`).
+- [x] Add problem seeding — seeded + ran one problem end-to-end locally against real schema (see below).
+- [x] Rate limiting on `/api/submissions` — 5 submissions / 10s per user via Redis (`SubmissionController`).
+- [x] Room problem assignment — `room_participants`/`room_problems` entities added, matching live Supabase schema exactly. `POST/GET /api/rooms/{id}/problems`. Submissions outside a room's assigned set are rejected once problems are assigned; empty = open practice room.
+- [ ] Verify Render deploy succeeds (re-check after Dockerfile fix ships)
 
 ### Frontend
 - [ ] Deploy to Vercel — set `VITE_API_URL` to Render backend URL
 - [ ] Profile page (submission history, rating)
-- [ ] Room lobby shows participants in real-time
-- [ ] Submission history table on problem page
+- [x] Room lobby shows participants in real-time — join now upserts `room_participants` + broadcasts `/topic/room/{id}/lobby`; `GET /api/rooms/{id}/participants`.
+- [ ] Submission history table on problem page — backend DTO ready (`GET /api/submissions/my`), needs UI.
 
 ### Judge
 - [ ] Isolate judge runs in Docker containers (current: temp dir on same process — fine for 15 users, upgrade if needed)
-- [ ] Return compile errors to frontend (CE message)
+- [x] Return compile errors to frontend (CE message) — sent transiently over `/topic/submission/{id}` as `message`, not persisted (no `message` column on live `submissions` table).
+
+### Fixed along the way (not on the original list)
+- [x] `JudgeService` stdout/stderr pipe deadlock on large output (was reading after `waitFor()`, could hang).
+- [x] `GET /api/submissions/{id}` and `/my` were crashing (403, actually a Jackson/Hibernate lazy-proxy serialization error) — now return DTOs.
+- [x] Room creation was leaking `User.passwordHash` in the API response — added `@JsonIgnore`.
+- [x] Leaderboard double-counted repeated accepted submissions to the same problem — now dedupes per user/problem/room.
+- [x] Leaked Redis password in `application.properties` — now `${REDIS_PASSWORD}`.
 
 ### Polish
 - [ ] Keep Render free instance warm (UptimeRobot ping every 10 min)

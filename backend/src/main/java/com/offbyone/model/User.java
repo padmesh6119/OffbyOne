@@ -1,5 +1,6 @@
 package com.offbyone.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -11,6 +12,7 @@ public class User {
     private UUID id;
     @Column(unique = true, nullable = false) private String username;
     @Column(unique = true, nullable = false) private String email;
+    @JsonIgnore
     @Column(name = "password_hash", nullable = false) private String passwordHash;
     private int rating = 1200;
     @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
