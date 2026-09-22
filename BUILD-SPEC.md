@@ -1,18 +1,19 @@
 # OffByOne — Build Spec
 
-Implementation plan. Written to be executed by a coding agent: every phase has concrete file paths, schemas, API shapes, and **acceptance criteria you can actually run**.
+Implementation plan for a **two-track duel platform**: Java code duels and SQL duels. Written to be executed by a coding agent — concrete file paths, schemas, API shapes, algorithms, and **runnable acceptance criteria**.
 
-> Read `HANDOFF.md` first — especially **§4 Traps**. It documents failures that cost hours (IPv6 pooler, masked 403s, lazy-loading 500s). Do not rediscover them.
+> Read `HANDOFF.md` first, especially **§4 Traps** — IPv6 pooler, masked 403s, lazy-loading 500s. All cost hours. Don't rediscover them.
 
-**Rules for whoever/whatever implements this:**
-1. Compile locally before pushing. Render builds take 2–4 min; a typo costs one.
+**Rules for whoever implements this:**
+
+1. Compile locally before pushing — Render builds take 2–4 min, a typo costs one:
    ```bash
    cd backend && docker run --rm -v "$PWD":/app -v m2cache:/root/.m2 -w /app \
      maven:3.9-eclipse-temurin-21 mvn -q clean compile
    ```
-2. Every phase ends with its acceptance check passing against a live URL. "It compiles" is not done.
-3. Never verify with `/health` — it doesn't touch the DB and returns 200 even when everything else is broken. Verify with a DB-backed endpoint.
-4. Don't run untrusted code or SQL against the production Supabase instance. See §9.
+2. Each phase ends with its acceptance check passing against a live URL. "It compiles" is not done.
+3. **Never verify with `/health`** — it doesn't touch the DB and returns 200 while everything else is broken. Verify with a DB-backed endpoint.
+4. Never run untrusted code or SQL against the production Supabase instance. See §9.
 
 ---
 
@@ -23,52 +24,57 @@ Checked against production, not assumed.
 | Thing | State |
 |---|---|
 | Name-only auth → JWT | working |
-| Problem bank | **29 problems / 142 test cases** live |
+| Java problem bank | **29 problems / 142 test cases** live |
+| **SQL challenge bank** | **12 challenges committed**, execution-verified (§6) |
 | Rooms: create, join by code, participants | working |
 | Host-only actions | enforced (non-host → 403) |
 | Judge: accepted / wrong_answer | working, ~100ms |
 | Leaderboard ranking | working |
-| Rate limiting (5 per 10s) | working — 5 through, 4 × 429 |
+| Rate limiting 5/10s | working — 5 through, 4 × 429 |
 | Redis (Upstash) | connected |
-| WebSocket | server publishes; **no client subscribes** |
+| WebSocket | server publishes; **no client subscribes** ← biggest gap |
 | Duel mode | not built |
+| SQL execution engine | **not built** — spec in §6 |
 | Elo / rating | column exists, never written |
-| Judge sandboxing | **none** — see §9 |
+| Judge sandboxing | **none** — §9 |
 
-**Known data wrinkle:** `sum-two` has 2 test cases; the other 28 have 5. It was hand-created before the seeder existed, and the seeder skips existing slugs. Fix: delete the problem row and let the seeder re-create it.
+**Data wrinkle:** `sum-two` has 2 test cases; the other 28 have 5. It was hand-created before the seeder existed and the seeder skips existing slugs. Fix in §3.
 
 ---
 
 ## 2. North star
 
-A **duel platform**, not a practice site. Core loop:
+A **duel platform**. Never single-player.
 
-> 2+ players join a room by code → 5 challenges → everyone races → live leaderboard → winner.
+> 2+ players join by code → 5 challenges, mixed Java and SQL → everyone races → live leaderboard → winner.
 
-Two hard product rules:
-- **Never single-player.** A duel requires ≥2 participants to start.
-- **Challenges are generated, not hand-written.** Long-term the bank is generators + seeds, not fixed questions.
+Two tracks, equal weight:
+
+| Track | Player writes | Graded by |
+|---|---|---|
+| **Code** | Java / Python / C++ reading stdin | stdout compared to expected |
+| **SQL** | A query against a generated database | **result set** compared to reference output |
+
+A duel mixes both — e.g. rounds 1,3 Java / 2,5 SQL / 4 debugging. SQL is the differentiator; nobody in this space does SQL duels well.
 
 ---
 
 ## 3. Phase 0 — cleanup (half a day)
 
-Small, unblocks everything else.
-
 | Task | Detail |
 |---|---|
-| Delete dead frontend files | `frontend/src/pages/Login.jsx`, `Register.jsx` — leftovers from before the name-only pivot, not routed |
-| Re-seed `sum-two` | `DELETE FROM test_cases WHERE problem_id=(SELECT id FROM problems WHERE slug='sum-two'); DELETE FROM problems WHERE slug='sum-two';` then restart — seeder re-creates it with 5 cases |
-| Clear debug data | `HANDOFF.md` §9 — 17 users are mostly test accounts |
-| Apply duel migration | §4.1 below |
+| Delete dead frontend files | `frontend/src/pages/Login.jsx`, `Register.jsx` — pre-pivot leftovers, not routed |
+| Re-seed `sum-two` | `DELETE FROM test_cases WHERE problem_id=(SELECT id FROM problems WHERE slug='sum-two'); DELETE FROM problems WHERE slug='sum-two';` then restart — seeder recreates with 5 cases |
+| Clear debug data | `HANDOFF.md` §9 — most of the 17 users are test accounts |
+| Apply migration | §4.1 |
 
 ---
 
-## 4. Phase 1 — Duel mode (the core product, ~1 week)
+## 4. Phase 1 — Duel mode (~1 week)
 
 ### 4.1 Migration
 
-Not yet applied. Run with `-i` (a heredoc without it silently does nothing — this already bit us once):
+**Use `-i`** — a heredoc without it silently does nothing. This already bit us once:
 
 ```sql
 ALTER TABLE rooms ADD COLUMN IF NOT EXISTS problem_count INTEGER NOT NULL DEFAULT 5;
@@ -84,53 +90,53 @@ CREATE INDEX IF NOT EXISTS idx_tc_problem ON test_cases(problem_id);
 ```
 
 ```bash
-docker run --rm -i -e PGPASSWORD='<db password>' postgres:16-alpine \
+docker run --rm -i -e PGPASSWORD='<pw>' postgres:16-alpine \
   psql "postgresql://postgres.wpnotthptzpggyqxduft@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres?sslmode=require" < migration.sql
 ```
 
 ### 4.2 Start rules — `POST /api/rooms/{id}/start`
 
-Modify `RoomController.start`:
+In `RoomController.start`:
 
-1. Reject with **409** if `participantRepo.countByRoomId(id) < 2` → `{"error":"A duel needs at least 2 players"}`
-2. If no problems assigned, auto-pick `problem_count` random active problems — spread difficulty (e.g. 2 easy / 2 medium / 1 hard)
-3. Set `start_time = now()`, `end_time = now() + duration_minutes`
+1. **409** if `participantRepo.countByRoomId(id) < 2` → `{"error":"A duel needs at least 2 players"}`
+2. If nothing assigned, auto-pick `problem_count` challenges — mix difficulty **and** track (e.g. 3 code + 2 SQL)
+3. `start_time = now()`, `end_time = now() + duration_minutes`
 4. Broadcast `{"event":"started"}` on `/topic/room/{id}/lobby`
 
 ### 4.3 Scoring — `JudgeService.awardPoints`
 
-Already correctly ignores repeat solves. Add:
+Already ignores repeat solves correctly. Add:
 
 | Rule | Value |
 |---|---|
 | Base | `RoomProblem.points` (default 100) |
-| First blood | +50 to the first player to solve that problem in that room |
-| Speed decay | `floor(base × (1 − elapsed/duration × 0.5))` — never below 50% |
+| First blood | +50 to first solver of that problem in that room |
+| Speed decay | `floor(base × (1 − elapsed/duration × 0.5))`, never below 50% |
 | Wrong answer | −5, floored at 0 for that problem |
 | Track | increment `solved_count`, set `last_solve_at` |
 
-**Ranking:** `score DESC, last_solve_at ASC` (earlier finish wins ties).
+**Ranking:** `score DESC, last_solve_at ASC` — earlier finish wins ties.
 
 ### 4.4 Duel state endpoint
 
-`GET /api/rooms/{id}/state` — one call the frontend can poll as a WS fallback:
+`GET /api/rooms/{id}/state` — one call, also the WS fallback:
 
 ```json
 { "room": {"id","name","joinCode","status","startTime","endTime","durationMinutes"},
-  "problems": [{"problemId","slug","title","difficulty","points","sortOrder","solvedBy":["username"]}],
+  "challenges": [{"type":"code|sql","slug","title","difficulty","points","sortOrder","solvedBy":["username"]}],
   "leaderboard": [{"username","score","solvedCount","rank"}],
   "me": {"username","score","solved":["slug"]} }
 ```
 
-> Needs `@Transactional(readOnly = true)` — it walks lazy associations. See `HANDOFF.md` §4.3.
+> Needs `@Transactional(readOnly = true)` — walks lazy associations. `HANDOFF.md` §4.3.
 
 ### 4.5 Ending a duel
 
-Scheduled sweep (`@Scheduled(fixedDelay=15000)`): any `active` room past `end_time`, or where someone solved all problems → `status='finished'`, broadcast final standings on `/topic/room/{id}/finished`.
+`@Scheduled(fixedDelay=15000)` sweep: any `active` room past `end_time`, or where a player solved everything → `status='finished'`, broadcast on `/topic/room/{id}/finished`.
 
-### 4.6 Frontend
+### 4.6 Frontend — the biggest gap
 
-Backend already publishes these. **Nothing subscribes yet — this is the single biggest gap.**
+The backend already publishes all of these. **Nothing subscribes.** This is the entire live-duel feel.
 
 | Topic | Fires |
 |---|---|
@@ -140,29 +146,29 @@ Backend already publishes these. **Nothing subscribes yet — this is the single
 | `/topic/room/{id}/finished` | duel over (new) |
 
 Screens:
-1. **Home** — Create Duel / Join with Code. Remove solo entry points.
-2. **Lobby** — live participants, share code, host-only Start (disabled under 2 players, with reason shown).
-3. **Duel** — problem tabs 1–5, Monaco editor, countdown, **live leaderboard sidebar**, per-problem solved ticks.
+1. **Home** — Create Duel / Join with Code. No solo entry points.
+2. **Lobby** — live participants, share code, host-only Start (disabled under 2, with reason shown).
+3. **Duel** — challenge tabs 1–5, Monaco editor (Java mode *or* SQL mode + schema viewer), countdown, **live leaderboard sidebar**, solved ticks.
 4. **Results** — standings, winner, rating delta.
 
-The live leaderboard during play *is* the product. Prioritise it over polish elsewhere.
+The live leaderboard *is* the product. Prioritise it.
 
 ### 4.7 Acceptance
 
 ```
-2 users join → start with 1 player → 409
-2nd joins → start → 200, 5 problems auto-assigned
-player A solves first → +150 (100 base + 50 first blood)
-player B solves same → +100 or less (speed decay)
-leaderboard: A rank 1
-time expires → status finished, standings broadcast
+start with 1 player            -> 409
+2nd joins, start               -> 200, 5 challenges assigned (mixed code+sql)
+A solves first                 -> +150 (100 base + 50 first blood)
+B solves same                  -> <=100 (speed decay)
+leaderboard                    -> A rank 1
+time expires                   -> finished + standings broadcast
 ```
 
 ---
 
-## 5. Phase 2 — Challenge Generation Engine (~1 week)
+## 5. Phase 2 — Code challenge generation
 
-Replaces hand-authored problems with **generators + seeds**. Same challenge from the same seed, different numbers every match, so answers can't be memorised or shared.
+Generators + seeds replace fixed problems: same challenge from the same seed, different numbers every match, so answers can't be memorised or shared.
 
 ### 5.1 Model
 
@@ -171,11 +177,11 @@ CREATE TABLE generators (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT UNIQUE NOT NULL,
   category TEXT NOT NULL,          -- 'java' | 'sql' | 'debug'
-  pattern TEXT NOT NULL,           -- 'arrays','two-pointers','dp',...
+  pattern TEXT NOT NULL,
   rating INTEGER NOT NULL DEFAULT 1200,
   version INTEGER NOT NULL DEFAULT 1,
   config JSONB NOT NULL,
-  active BOOLEAN NOT NULL DEFAULT false   -- only true after validation passes
+  active BOOLEAN NOT NULL DEFAULT false   -- true only after validation passes
 );
 
 CREATE TABLE challenge_instances (
@@ -189,149 +195,286 @@ CREATE TABLE challenge_instances (
 );
 ```
 
-### 5.2 Generate ahead of time, not at match time
+### 5.2 Pre-generate — never at match time
 
-**Do not generate during a duel.** The Render free instance is 0.1 CPU; generating + running a reference solution on the critical path will stall match start.
+The Render free instance is 0.1 CPU. Generating + running a reference solution on the critical path stalls match start.
 
-Instead: a batch job pre-generates ~50 instances per generator into `challenge_instances`. Matches serve a random low-`used_count` row. Same anti-memorisation benefit, no runtime cost, and validation failures surface at authoring time rather than in front of players.
+Batch-generate ~50 instances per generator into `challenge_instances`; matches serve a random low-`used_count` row. Same anti-memorisation benefit, zero runtime cost, and validation failures surface at authoring time instead of in front of players.
 
-### 5.3 Each generator ships three things
+### 5.3 Every generator ships three artifacts
 
-1. **Generator** — `seed → concrete instance` (must be deterministic)
+1. **Generator** — `seed → instance`, deterministic
 2. **Reference solution** — produces expected output
 3. **Validator** — cross-checks before `active=true`
 
-### 5.4 Validation gate (non-negotiable)
+### 5.4 Validation gate — non-negotiable
 
-A bad generator poisons *every* match it appears in, unlike a bad hand-written question which poisons one. Before `active=true`:
+A bad generator poisons *every* match it appears in, unlike a bad hand-written question which poisons one.
 
-- Brute-force and optimal references must agree on 100+ random instances
-- Boundary instances included: `0`, `1`, empty, all-equal, max constraint
-- Same seed → byte-identical instance (determinism check)
-- Sample in the statement verified against the reference
+Before `active=true`:
+- Brute-force and optimal references agree on 100+ random instances
+- Boundary instances: `0`, `1`, empty, all-equal, max constraint
+- Same seed → byte-identical instance
+- Statement's worked example verified against the reference
 
-> Precedent: the 29 committed problems were validated exactly this way — every expected output cross-checked against an independently written implementation, 0 mismatches. Reuse `/tmp/validate.py` as the model.
+> **Precedent:** the 29 committed Java problems were validated exactly this way — every expected output cross-checked against an independently written implementation, 0 mismatches across 50 tricky cases.
 
-**Watch integer division.** A spec'd answer of `ceil(n/step)` implemented in Java as `Math.ceil(n/step)` with ints gives `ceil(5/2) = 2`, not `3`. Use `(n + step - 1) / step`. This class of bug is silent and poisons everything downstream.
+**Integer-division trap.** A spec'd `ceil(n/step)` implemented in Java as `Math.ceil(n/step)` with ints gives `ceil(5/2) = 2`, not `3`. Use `(n + step - 1) / step`. Silent, and poisons everything downstream.
 
 ### 5.5 Honest limitation
 
-20–50 generators give millions of *instances* of 20–50 *shapes*. It defeats memorising **answers**, not memorising **approaches**. That's still a win — don't build the pitch on the big number.
+20–50 generators give millions of *instances* of 20–50 *shapes*. It defeats memorising **answers**, not **approaches**. Still a win — don't build the pitch on the big number.
 
 ---
 
-## 6. Phase 3 — SQL duels (the differentiator, ~1 week)
+## 6. SQL duels — the differentiator
 
-The most distinctive feature available. Nobody in this space does SQL duels well.
+**Status: content built and verified. Engine not built.**
+
+`backend/src/main/resources/sql-problems.json` — **12 challenges**, every one executed against real SQLite, every expected result computed from a reference query, not written by hand.
+
+| Difficulty | Count |
+|---|---|
+| easy | 4 |
+| medium | 6 |
+| hard | 2 |
+
+Patterns: `group-by`, `having`, `anti-join`, `join+aggregate`, `scalar-subquery`, `aggregation+subquery`, `ranking`, `date+group-by`, `window-function`.
 
 ### 6.1 Answer by execution
 
-Generate a schema + data, pose a task, run the player's SQL, compare **result sets**. Any logically equivalent query passes — subquery, CTE, window function, join.
+Generate schema + data, pose a task, run the player's SQL, compare **result sets**. Any logically equivalent query passes.
 
 ```
-seed → schema + rows → task statement
-player SQL ─┐
-reference SQL ─┴→ execute both → compare result sets
+seed → schema + rows → task
+player SQL   ─┐
+reference SQL ┴→ execute both → compare result sets
 ```
 
-**You still need a reference query per generator.** What you avoid storing is the canonical query *as the grading key* — not the answer itself.
+**You still need a reference query per challenge.** What you avoid is storing a canonical query *as the grading key*.
 
-### 6.2 Run it in SQLite, not Postgres
+### 6.2 Proven
 
-**Never execute player SQL against the Supabase instance** — that database holds your user rows, and `SELECT * FROM users` would exfiltrate all of them. This is a bigger exposure than the code judge, because it runs *inside* the data.
+`tools/verify_sql_equivalence.py` — **11/11 passing**:
 
-Use an in-memory **SQLite** DB per submission: build schema, insert generated rows, run the query, discard. Zero blast radius, no extra infra, works on the free tier. You lose some Postgres-only syntax; irrelevant for the question shapes that matter.
+| Query form | Result |
+|---|---|
+| Derived-table join (reference) | accepted |
+| CTE (`WITH`) | accepted |
+| Correlated subquery | accepted |
+| Window function (`AVG OVER PARTITION BY`) | accepted |
+| Same query with `ORDER BY name DESC` | accepted (order-insensitive) |
+| `RANK() OVER` vs correlated MAX | accepted |
+| `NOT IN` vs `NOT EXISTS` vs `LEFT JOIN ... IS NULL` | all accepted |
+| **`>=` instead of `>`** | **rejected** |
+| **Overall average instead of per-department** | **rejected** |
 
-If you later need window functions or Postgres semantics, graduate to a throwaway schema with a locked-down role, `statement_timeout`, and no cross-schema grants — but start with SQLite.
+Four syntactically unrelated correct queries accepted; near-miss wrong ones rejected. The approach works.
 
-Also enforce: single statement only (reject `;`-chained), `SELECT`-only, 2s timeout, row cap.
+### 6.3 ⚠️ The lesson that matters most — weak data hides wrong answers
 
-### 6.3 Result comparison is the fiddly part
+The `>=` vs `>` case **initially passed**. On the original dataset no employee's salary exactly equalled their department average, so `>=` and `>` returned identical rows. The query is wrong in general but indistinguishable on that data.
+
+Fix: add an employee whose salary is **exactly** the department average (`Bala`, Engineering, 64000 — which keeps the average at 64000 and sits on it). Then `>=` includes them, `>` doesn't, and the wrong query fails.
+
+> **Rule: every generated dataset must contain rows that sit exactly on the boundary the task tests.** Off-by-one and `>=`/`>` errors are the most common wrong answers, and data without a boundary row silently accepts them. This applies to every generator, not just SQL — it's the single most important quality rule in this document.
+
+Checklist per SQL generator:
+- A row exactly on each comparison boundary (`= avg`, `= max`, `= threshold`)
+- A group with exactly one member, and an empty group (tests `JOIN` vs `LEFT JOIN`)
+- A NULL in any nullable column used by the task
+- Duplicate values (tests `DISTINCT` handling)
+- Non-empty, non-trivial expected result — 0 rows passes for many wrong queries
+
+### 6.4 Execute in SQLite, not Postgres
+
+**Never run player SQL against the Supabase instance.** That database holds your user rows; `SELECT * FROM users` would exfiltrate all of them. This is a *larger* exposure than the code judge, because it executes inside the data.
+
+Use in-memory SQLite per submission: build schema, insert generated rows, run query, discard. Zero blast radius, no extra infrastructure, works on the free tier. You lose Postgres-only syntax; irrelevant for these question shapes — note the window-function challenges already work in SQLite.
+
+Graduate later to a throwaway Postgres schema with a locked-down role + `statement_timeout` only if you need Postgres semantics.
+
+Maven:
+```xml
+<dependency>
+  <groupId>org.xerial</groupId>
+  <artifactId>sqlite-jdbc</artifactId>
+  <version>3.46.1.0</version>
+</dependency>
+```
+
+### 6.5 `SqlJudgeService` — implementation
+
+New file `backend/src/main/java/com/offbyone/judge/SqlJudgeService.java`:
+
+```java
+// 1. jdbc:sqlite::memory:  (fresh connection per submission)
+// 2. execute challenge.schema[]  then challenge.seedData[]
+// 3. guard the player query (see 6.6), then execute with a 2s timeout
+// 4. read ResultSet -> List<List<Object>>, cap 1000 rows
+// 5. compare against challenge.expected using the rules in 6.7
+// 6. close connection in finally -> in-memory DB is destroyed
+```
+
+Verdicts: `accepted`, `wrong_answer`, `sql_error` (syntax/unknown column — return the message, it's good feedback), `tle`, `rejected` (guard tripped).
+
+### 6.6 Guards on player SQL
+
+| Guard | Rule |
+|---|---|
+| Single statement | reject if `;` appears before trailing whitespace |
+| Read-only | must start with `SELECT` or `WITH`; reject `ATTACH`, `PRAGMA`, `INSERT`, `UPDATE`, `DELETE`, `DROP`, `ALTER`, `CREATE` |
+| Timeout | `Statement.setQueryTimeout(2)` |
+| Row cap | stop reading at 1000 |
+| Size cap | reject queries over 10 KB |
+
+SQLite in-memory has no filesystem or network reach, so these guard against runaway cost and confusion, not exfiltration — the isolation does that.
+
+### 6.7 Result comparison algorithm
 
 Naive `==` produces false negatives, and a correct answer marked wrong kills a duel instantly.
 
 | Case | Rule |
 |---|---|
-| Row order | Compare as a **multiset** unless the task says "ordered" |
+| Row order | **Multiset** compare unless `challenge.ordered == true` |
 | Duplicates | Preserve — multiset, not set |
-| Column names | Compare by position, ignore aliases |
-| NULLs | `NULL == NULL` for comparison |
+| Column names | Compare **by position**, ignore aliases |
+| Column count | Must match exactly |
+| NULL | `NULL` equals `NULL` |
 | Floats | Tolerance `1e-6` |
-| Types | Normalise int/numeric before compare |
+| Numeric types | Normalise `Integer`/`Long`/`BigDecimal` before compare |
+| Strings | Exact, case-sensitive |
 
-### 6.4 Example generator
+Reference implementation (proven in `tools/verify_sql_equivalence.py`):
+```python
+if challenge["ordered"]: return rows == expected
+return sorted(expected, key=repr) == sorted(rows, key=repr)
+```
+In Java: normalise each row to a canonical string, sort both lists, compare.
+
+### 6.8 Challenge JSON format
+
+```json
+{ "slug":"sql-above-dept-avg", "title":"Above Department Average",
+  "difficulty":"medium", "rating":1400, "pattern":"aggregation+subquery",
+  "schema":["CREATE TABLE departments (...)","CREATE TABLE employees (...)"],
+  "seedData":["INSERT INTO departments VALUES ...","INSERT INTO employees VALUES ..."],
+  "task":"List the names of employees who earn more than the average salary of their own department.",
+  "referenceQuery":"SELECT e.name FROM ...",
+  "ordered":false,
+  "expected":{"columns":["name"],"rows":[["Ravi"],["Kavi"],["Divya"]]} }
+```
+
+`ordered:true` only when the task explicitly says "order by …" — otherwise comparison is order-insensitive.
+
+### 6.9 Schema + seeder
+
+```sql
+CREATE TABLE sql_challenges (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  slug TEXT UNIQUE NOT NULL,
+  title TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  rating INTEGER NOT NULL DEFAULT 1200,
+  pattern TEXT,
+  schema_sql JSONB NOT NULL,
+  seed_sql JSONB NOT NULL,
+  task TEXT NOT NULL,
+  reference_query TEXT NOT NULL,
+  ordered BOOLEAN NOT NULL DEFAULT false,
+  expected JSONB NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT true
+);
+```
+
+Mirror `seed/ProblemSeeder.java` as `seed/SqlChallengeSeeder.java`, loading `sql-problems.json`, idempotent by slug.
+
+### 6.10 API
 
 ```
-schema: employees(id, name, dept_id, salary), departments(id, name)
-seed → 3–5 departments, 15–40 employees, salaries 30k–150k
-task: "Find employees earning more than their department's average salary."
-reference: SELECT e.name FROM employees e
-           JOIN (SELECT dept_id, AVG(salary) a FROM employees GROUP BY dept_id) d
-             ON e.dept_id = d.dept_id WHERE e.salary > d.a;
+GET  /api/sql-challenges              list (id, slug, title, difficulty, rating, pattern)
+GET  /api/sql-challenges/{slug}       task + schema DDL + sample rows (NEVER referenceQuery or expected)
+POST /api/sql-submissions             { slug, query, roomId? } -> { submissionId, verdict, ... }
 ```
 
-Generator must guarantee a non-empty, non-trivial answer — a task whose correct result is 0 rows is both unsatisfying and passes for many wrong queries.
+**`referenceQuery` and `expected` must never reach the client.** Use a DTO — do not serialise the entity. The frontend needs the schema and a preview of the rows so players can see what they're querying.
 
-### 6.5 Acceptance
+### 6.11 Frontend
 
-Three logically different correct queries (subquery / CTE / window) all pass. A wrong one fails. `SELECT * FROM users` cannot reach real data. A 10s query is killed.
+Reuse Monaco with `language="sql"`. The duel screen needs a **schema panel** — table names, columns, and ~5 sample rows per table. Nobody can write a query against an invisible database.
+
+### 6.12 Regenerating / extending the bank
+
+```bash
+python3 tools/gen_sql_bank.py            # regenerates + executes every challenge
+python3 tools/verify_sql_equivalence.py  # must print 11 correct / 0 incorrect
+```
+
+`gen_sql_bank.py` asserts every reference query returns ≥1 row, so a broken challenge fails at generation rather than in a duel. Add challenges by appending an `add(...)` call.
+
+### 6.13 Acceptance
+
+```
+3 logically different correct queries (CTE / correlated / window) -> all accepted
+">= instead of >"                                                 -> rejected
+"SELECT * FROM users"                                             -> cannot reach real data
+"DROP TABLE employees"                                            -> rejected by guard
+a 10s query                                                       -> killed at 2s
+GET /api/sql-challenges/{slug}                                    -> no referenceQuery, no expected
+```
 
 ---
 
 ## 7. Phase 4 — progression & retention
 
-- **Elo** after each duel (K=32, `users.rating` already exists)
-- **Profile** — rating graph, solved count, duel W/L, pattern coverage
-- **Rivals** — head-to-head record vs each opponent; the strongest retention lever at small scale
+- **Elo** after each duel (K=32; `users.rating` exists)
+- **Profile** — rating graph, solved count, W/L, pattern coverage, **code vs SQL split**
+- **Rivals** — head-to-head record; strongest retention lever at small scale
 - **Streaks / daily duel**
-- **Catch-up mechanic** — losing player's next problem worth more. Cheap, counters snowballing, and it's a genuine differentiator vs Codeforces/LeetCode.
+- **Catch-up** — losing player's next challenge worth more. Cheap, counters snowballing, genuinely differentiating.
 
-Deliberately deferred:
-- **Adaptive difficulty** — needs ~50+ solves per problem for signal. With 10–15 players that's months away. Hand-set ratings; wire auto-calibration later or it thrashes on 3 data points.
-- **Sabotage/twist rounds** — high balance risk; unfair mechanics kill friend-group games fast.
-- **Blind submission** — directly conflicts with the live leaderboard, which is the better hook.
-- **Solo path mode** — violates the "never single-player" rule. If wanted, do it as **co-op** instead.
-
----
-
-## 8. "Kaggle level" — what makes it serious rather than a toy
-
-Not features; properties. These are what separate a class project from a platform.
-
-**Reproducibility.** Every duel replayable from `(generator_version, seed)`. Store the seed, not the rendered challenge. Anyone can regenerate the exact match. This is the single most credible thing in the whole design — it's what "procedurally generated from versioned generators and deterministic seeds" actually buys you.
-
-**Versioned generators.** Bump `version` on change; existing instances stay pinned. Old duels remain valid forever.
-
-**A real quality gate in CI.** Generator validation runs on every PR; a generator that fails cross-check can't merge. Quality enforced by pipeline, not vibes.
-
-**Submission replay.** Store every submission; let players re-watch a duel step by step. Cheap — the rows already exist.
-
-**Public problem format.** `problems.json` is already a clean contract. Document it and people can contribute problems by PR.
-
-**Coverage dashboard.** `generators × pattern × rating band`. Prevents the natural drift toward 80% arrays and 0% graphs.
-
-**Honest stats.** Per-problem solve rate, average time, first-blood rate, language breakdown. Turns the platform into something you can reason about.
-
-**Anti-cheat that isn't theatre.** Generated instances already defeat answer-sharing. Add near-duplicate detection across submissions in the same duel only if stakes ever justify it.
-
-**An API.** `GET /api/challenges/{seed}` returning a deterministic challenge makes the engine usable by others — the difference between a site and a platform.
+Deliberately deferred, with reasons:
+- **Adaptive difficulty** — needs ~50+ solves per problem for signal. At 10–15 players that's months. Hand-set ratings; auto-calibration will thrash on 3 data points.
+- **Sabotage / twist rounds** — high balance risk; unfair mechanics kill friend-group games.
+- **Blind submission** — conflicts with the live leaderboard, which is the better hook.
+- **Solo path mode** — violates never-single-player. Do it **co-op** if wanted.
 
 ---
 
-## 9. ⚠️ Security — do before anyone untrusted plays
+## 8. "Kaggle level" — what makes it serious
 
-Two separate problems. Both are real.
+Properties, not features.
+
+**Reproducibility.** Every duel replayable from `(generator_version, seed)`. Store the seed, not the rendered challenge. This is what "procedurally generated from versioned generators and deterministic seeds" actually buys — the most credible claim in the design.
+
+**Versioned generators.** Bump `version` on change; existing instances stay pinned. Old duels stay valid forever.
+
+**Quality gate in CI.** Run `tools/verify_sql_equivalence.py` and the Java validator on every PR. A generator failing cross-check cannot merge. Quality enforced by pipeline, not vibes.
+
+**Submission replay.** Every submission stored; replay a duel step by step. Rows already exist.
+
+**Open challenge format.** `problems.json` and `sql-problems.json` are clean contracts — document them and people can contribute by PR.
+
+**Coverage dashboard.** `generators × pattern × rating band`. Prevents drift to 80% arrays / 0% graphs.
+
+**Honest stats.** Per-challenge solve rate, average time, first-blood rate, language split. Also feeds rating auto-calibration once there's volume.
+
+**A public API.** `GET /api/challenges/{seed}` returning a deterministic challenge is the difference between a site and a platform.
+
+---
+
+## 9. ⚠️ Security — before anyone untrusted plays
 
 **1. Code judge is unsandboxed.** `JudgeService.run()` executes submitted code via `ProcessBuilder` in the backend's own container, as the app user, with network access and env vars in scope — including `SUPABASE_DB_PASSWORD` and `JWT_SECRET`. Any player can read them.
 
-Fix, cheapest first:
-1. Hosted judge API (Judge0 / Piston) — removes the problem entirely, fastest path
-2. Dedicated judge worker on a VM (Oracle Cloud Always Free) pulling from a queue
-3. Docker-per-submission `--network=none --memory=256m --pids-limit=64 --read-only` (needs a Docker socket; unavailable on Render free)
+Cheapest first:
+1. **Hosted judge API** (Judge0 / Piston) — removes the problem entirely
+2. **Judge worker on a VM** (Oracle Cloud Always Free) pulling from a queue
+3. **Docker-per-submission** `--network=none --memory=256m --pids-limit=64 --read-only` (needs a Docker socket; unavailable on Render free)
 
 Also missing: stdout size cap (an infinite print fills the disk) and fork limits.
 
-**2. SQL execution** — §6.2. Use SQLite; never the prod instance.
+**2. SQL execution** — §6.4. SQLite in-memory; never the prod instance.
 
 **Credential hygiene:** the DB password has already been rotated once after exposure. Keep secrets out of the repo — GitHub push protection has already blocked one commit containing them.
 
@@ -340,13 +483,13 @@ Also missing: stdout size cap (an infinite print fills the disk) and fork limits
 ## 10. Order of work
 
 1. **Phase 0** cleanup + migration — half a day
-2. **Phase 1** duel mode — the product. Nothing else matters if this isn't fun.
-3. **Sandbox the judge** — before sharing the link beyond people you trust
-4. **Phase 3** SQL duels — the differentiator, more distinctive than more Java problems
+2. **Phase 1** duel mode — nothing else matters if this isn't fun
+3. **§6 SQL engine** — content is done and verified; only the executor is missing. Highest value-per-hour in the document.
+4. **Sandbox the code judge** — before sharing beyond people you trust
 5. **Phase 2** generators for the top ~8 patterns
 6. **Phase 4** ratings, rivals, streaks
 
-Phase 3 before Phase 2 is deliberate: SQL-by-execution differentiates the product, while more Java generators only deepen something that already works.
+SQL before code-generators is deliberate: the SQL bank is already built and proven, so it's mostly executor work, and it differentiates the product. More Java generators only deepen something that already works.
 
 ---
 
@@ -356,9 +499,31 @@ Phase 3 before Phase 2 is deliberate: SQL-by-execution differentiates the produc
 |---|---|
 | 0 — cleanup | 0.5 day |
 | 1 — duel mode | ~1 week (backend 2–3d, frontend 3–4d) |
-| 2 — generation engine | ~1 week |
-| 3 — SQL duels | ~1 week (sandbox 2–3d is the hard part) |
+| **6 — SQL engine** | **2–3 days** (content done; executor + comparison + seeder + UI panel) |
+| 2 — code generators | ~1 week |
 | 4 — progression | 3–4 days |
 | Judge sandboxing | 1 day hosted / 2–3 days self-hosted |
 
-**~4–5 weeks** to all of it. Phases 0+1 alone give a genuinely playable game — ship that first and get real players on it before building the engine.
+**~3–4 weeks** for all of it. Phases 0+1 alone give a playable game — ship that and get real players on it before building the generation engine.
+
+---
+
+## 12. Repo map
+
+```
+backend/src/main/resources/
+  problems.json        29 Java problems, 142 test cases   (live)
+  sql-problems.json    12 SQL challenges, execution-verified (not yet seeded)
+
+backend/src/main/java/com/offbyone/
+  seed/ProblemSeeder.java       loads problems.json, idempotent by slug
+  seed/SqlChallengeSeeder.java  TO BUILD — mirror the above
+  judge/JudgeService.java       ⚠️ unsandboxed code execution + scoring
+  judge/SqlJudgeService.java    TO BUILD — §6.5
+
+tools/
+  gen_sql_bank.py              regenerates + executes the SQL bank
+  verify_sql_equivalence.py    must print "11 correct / 0 incorrect"
+```
+
+The Java bank's generator script was lost to a temp directory; `problems.json` is committed and the validation method is documented in §5.4 if it needs rebuilding.
