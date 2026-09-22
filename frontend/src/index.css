@@ -100,4 +100,9 @@ select { padding: 0.5rem; background: #1a1a1a; color: #fff;
   margin-bottom: 1rem; }
 .duel-sidebar tr.me td { color: #7c83fd; font-weight: 600; }
 
+.statement-panel { background: #111; border: 1px solid #333; border-radius: 6px;
+  padding: 1rem; max-height: 22vh; overflow-y: auto; }
+.statement-panel h3 { margin-bottom: 0.5rem; font-size: 1rem; }
+.statement-panel .statement { font-size: 0.875rem; line-height: 1.7; color: #ccc; }
+
 tr.winner td { color: #ffd700; font-weight: 600; }

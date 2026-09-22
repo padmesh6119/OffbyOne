@@ -18,6 +18,8 @@ export default function Room() {
   const [codeBySlug, setCodeBySlug] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [verdict, setVerdict] = useState(null);
+  const [problemDetail, setProblemDetail] = useState(null);
+  const [secondsLeft, setSecondsLeft] = useState(0);
 
   const username = localStorage.getItem('username');
   const subsRef = useRef([]);
@@ -29,8 +31,7 @@ export default function Room() {
   useEffect(() => {
     if (!roomId) return;
     refresh(roomId);
-
-    const client = connect(() => {
+    connect(() => {
       subsRef.current.push(subscribe(`/topic/room/${roomId}/lobby`, () => refresh(roomId)));
       subsRef.current.push(subscribe(`/topic/room/${roomId}/submission`, () => refresh(roomId)));
       subsRef.current.push(subscribe(`/topic/room/${roomId}/finished`, (data) => {
@@ -38,9 +39,7 @@ export default function Room() {
         refresh(roomId);
       }));
     });
-
     const poll = setInterval(() => refresh(roomId), 8000);
-
     return () => {
       subsRef.current.forEach((s) => s?.unsubscribe?.());
       subsRef.current = [];
@@ -48,6 +47,24 @@ export default function Room() {
       disconnect();
     };
   }, [roomId, refresh]);
+
+  // 1-second countdown tick
+  useEffect(() => {
+    if (!state?.room?.endTime || state.room.status !== 'active') return;
+    const end = new Date(state.room.endTime).getTime();
+    const tick = () => setSecondsLeft(Math.max(0, Math.floor((end - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [state?.room?.endTime, state?.room?.status]);
+
+  // fetch problem statement when active tab changes
+  const activeSlug = selectedSlug || state?.problems?.[0]?.slug || null;
+  useEffect(() => {
+    if (!activeSlug) return;
+    setProblemDetail(null);
+    api.problem(activeSlug).then(setProblemDetail).catch(() => {});
+  }, [activeSlug]);
 
   async function createRoom() {
     setError('');
@@ -74,22 +91,28 @@ export default function Room() {
   }
 
   async function submit() {
-    const problem = state.problems.find((p) => p.slug === selectedSlug);
-    if (!problem) return;
+    if (!activeSlug) return;
     setSubmitting(true);
     setVerdict(null);
-    const code = codeBySlug[selectedSlug] ?? STARTERS[lang];
-    const { submissionId } = await api.submit({ slug: selectedSlug, roomId, language: lang, code });
-    const sub = subscribe(`/topic/submission/${submissionId}`, (data) => {
-      setVerdict(data);
+    try {
+      const code = codeBySlug[activeSlug] ?? STARTERS[lang];
+      const { submissionId } = await api.submit({ slug: activeSlug, roomId, language: lang, code });
+      const sub = subscribe(`/topic/submission/${submissionId}`, (data) => {
+        setVerdict(data);
+        setSubmitting(false);
+        sub.unsubscribe();
+        refresh(roomId);
+      });
+    } catch (err) {
+      setError(errorMessage(err));
       setSubmitting(false);
-      sub.unsubscribe();
-    });
+    }
   }
 
   function leaveToHome() {
     setRoomId(null); setState(null); setFinalStandings(null);
-    setSelectedSlug(null); setVerdict(null); setCodeBySlug({}); setError('');
+    setSelectedSlug(null); setVerdict(null); setCodeBySlug({});
+    setProblemDetail(null); setError('');
   }
 
   if (!roomId) {
@@ -127,7 +150,9 @@ export default function Room() {
           <thead><tr><th>Player</th></tr></thead>
           <tbody>
             {state.leaderboard.map((row) => (
-              <tr key={row.username}><td>{row.username}{row.username === state.room.hostUsername ? ' (host)' : ''}</td></tr>
+              <tr key={row.username}>
+                <td>{row.username}{row.username === state.room.hostUsername ? ' (host)' : ''}</td>
+              </tr>
             ))}
           </tbody>
         </table>
@@ -146,11 +171,10 @@ export default function Room() {
   }
 
   if (state.room.status === 'active') {
-    const problem = state.problems.find((p) => p.slug === selectedSlug) || state.problems[0];
-    const activeSlug = problem?.slug;
-    const remainingMs = new Date(state.room.endTime).getTime() - Date.now();
-    const remainingSec = Math.max(0, Math.floor(remainingMs / 1000));
-    const mySolved = new Set(state.me.solved);
+    const problem = state.problems.find((p) => p.slug === activeSlug) || state.problems[0];
+    const mySolved = new Set(state.me?.solved || []);
+    const mins = Math.floor(secondsLeft / 60);
+    const secs = String(secondsLeft % 60).padStart(2, '0');
 
     return (
       <div className="duel-layout">
@@ -159,7 +183,7 @@ export default function Room() {
             {state.problems.map((p) => (
               <button key={p.slug}
                 className={`duel-tab ${p.slug === activeSlug ? 'active' : ''} ${mySolved.has(p.slug) ? 'solved' : ''}`}
-                onClick={() => setSelectedSlug(p.slug)}>
+                onClick={() => { setSelectedSlug(p.slug); setVerdict(null); }}>
                 {mySolved.has(p.slug) ? '✓ ' : ''}{p.title}
                 <span className={`diff-${p.difficulty}`}> ({p.difficulty})</span>
               </button>
@@ -167,29 +191,42 @@ export default function Room() {
           </div>
           {problem && (
             <>
-              <select value={lang} onChange={(e) => setLang(e.target.value)}>
-                <option value="java">Java</option>
-                <option value="python">Python</option>
-                <option value="cpp">C++</option>
-              </select>
+              <div className="statement-panel">
+                <h3>{problem.title}</h3>
+                {problemDetail
+                  ? <div className="statement" style={{whiteSpace:'pre-wrap'}}>{problemDetail.statement}</div>
+                  : <div className="hint">Loading...</div>
+                }
+              </div>
+              <div style={{display:'flex', gap:'0.5rem', alignItems:'center'}}>
+                <select value={lang} onChange={(e) => setLang(e.target.value)}>
+                  <option value="java">Java</option>
+                  <option value="python">Python</option>
+                  <option value="cpp">C++</option>
+                </select>
+                <button onClick={submit} disabled={submitting} style={{flex:1}}>
+                  {submitting ? 'Judging...' : 'Submit'}
+                </button>
+              </div>
               <Editor
-                height="55vh"
+                height="42vh"
                 language={lang === 'cpp' ? 'cpp' : lang}
                 value={codeBySlug[activeSlug] ?? STARTERS[lang]}
                 onChange={(v) => setCodeBySlug((prev) => ({ ...prev, [activeSlug]: v }))}
                 theme="vs-dark"
               />
-              <button onClick={submit} disabled={submitting}>{submitting ? 'Judging...' : 'Submit'}</button>
               {verdict && (
                 <div className={`verdict verdict-${verdict.verdict}`}>
-                  {verdict.verdict.toUpperCase()} — {verdict.runtimeMs}ms
+                  {verdict.verdict.toUpperCase()}{verdict.runtimeMs ? ` — ${verdict.runtimeMs}ms` : ''}
+                  {verdict.message ? <div style={{fontSize:'0.8rem',marginTop:'0.25rem',fontWeight:'normal'}}>{verdict.message}</div> : null}
                 </div>
               )}
+              {error && <p className="error">{error}</p>}
             </>
           )}
         </div>
         <div className="duel-sidebar">
-          <div className="countdown">{Math.floor(remainingSec / 60)}:{String(remainingSec % 60).padStart(2, '0')}</div>
+          <div className="countdown">{mins}:{secs}</div>
           <h3>Leaderboard</h3>
           <table>
             <thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>

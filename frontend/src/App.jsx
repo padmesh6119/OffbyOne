@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
+import { HashRouter as BrowserRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import Join from './pages/Join';
 import Problems from './pages/Problems';
 import ProblemDetail from './pages/ProblemDetail';
@@ -14,7 +14,7 @@ function Nav() {
       <Link to="/sql">SQL Duels</Link>
       <Link to="/problems">Practice</Link>
       {username && <span className="nav-user">👤 {username}</span>}
-      <button onClick={() => { localStorage.clear(); location.reload(); }}>Leave</button>
+      <button onClick={() => { localStorage.clear(); location.href = '/'; }}>Leave</button>
     </nav>
   );
 }
