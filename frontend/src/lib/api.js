@@ -25,6 +25,7 @@ export const api = {
   createRoom: (body) => req('/api/rooms', { method: 'POST', body: JSON.stringify(body) }),
   joinRoom: (code) => req(`/api/rooms/${code}/join`, { method: 'POST' }),
   startRoom: (id) => req(`/api/rooms/${id}/start`, { method: 'POST' }),
+  leaveRoom: (id) => req(`/api/rooms/${id}/leave`, { method: 'POST' }),
   leaderboard: (id) => req(`/api/rooms/${id}/leaderboard`),
   roomState: (id) => req(`/api/rooms/${id}/state`),
   sqlProblems: () => req('/api/sql-problems'),

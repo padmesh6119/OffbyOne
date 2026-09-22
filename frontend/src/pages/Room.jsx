@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
+import { motion } from 'framer-motion';
 import { api, errorMessage } from '../lib/api';
 import { connect, subscribe, disconnect } from '../lib/ws';
 import { STARTERS } from '../lib/starters';
@@ -10,6 +11,8 @@ export default function Room() {
   const [finalStandings, setFinalStandings] = useState(null);
   const [error, setError] = useState('');
 
+  const [homeMode, setHomeMode] = useState(null); // null | 'duel' | 'tournament'
+  const [homeLanguage, setHomeLanguage] = useState(null); // null | 'java' | 'sql'
   const [roomName, setRoomName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [submittingHome, setSubmittingHome] = useState(false);
@@ -71,7 +74,9 @@ export default function Room() {
     setError('');
     setSubmittingHome(true);
     try {
-      const r = await api.createRoom({ name: roomName });
+      const body = { name: roomName };
+      if (homeMode === 'duel') body.mode = 'duel';
+      const r = await api.createRoom(body);
       setRoomId(r.id);
     } catch (err) { setError(errorMessage(err)); }
     finally { setSubmittingHome(false); }
@@ -114,34 +119,76 @@ export default function Room() {
     }
   }
 
-  function leaveToHome() {
+  async function leaveToHome() {
+    if (roomId) { try { await api.leaveRoom(roomId); } catch { /* leaving regardless */ } }
     setRoomId(null); setState(null); setFinalStandings(null);
     setSelectedSlug(null); setVerdict(null); setCodeBySlug({});
-    setProblemDetail(null); setError('');
+    setProblemDetail(null); setError(''); setHomeMode(null); setHomeLanguage(null);
+    setRoomName(''); setJoinCode('');
   }
 
   if (!roomId) {
+    if (!homeMode) {
+      return (
+        <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.4 }}>
+          <h2>Play</h2>
+          <div className="mode-cards">
+            <button className="mode-card mode-card-duel" onClick={() => setHomeMode('duel')}>
+              <span className="mode-icon">⚔️</span>
+              <span className="mode-title">1v1 Duel</span>
+              <span className="mode-desc">Same problem. Same time. First to solve wins the round. Play as long as you want.</span>
+            </button>
+            <button className="mode-card mode-card-tournament" onClick={() => setHomeMode('tournament')}>
+              <span className="mode-icon">🏆</span>
+              <span className="mode-title">Tournament</span>
+              <span className="mode-desc">2–6 players. Fixed problem set. Race to the top of the leaderboard.</span>
+            </button>
+          </div>
+        </motion.div>
+      );
+    }
+
+    if (!homeLanguage) {
+      return (
+        <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+          <button onClick={() => setHomeMode(null)} className="link-btn">← Back</button>
+          <h2>{homeMode === 'duel' ? '1v1 Duel' : 'Tournament'} — choose language</h2>
+          <div className="language-toggle">
+            <button className="language-btn" onClick={() => setHomeLanguage('java')}>Java</button>
+            <button className="language-btn" disabled title="SQL duels aren't wired into rooms yet — coming soon">
+              SQL <span className="soon-badge">soon</span>
+            </button>
+          </div>
+        </motion.div>
+      );
+    }
+
     return (
-      <div className="page">
-        <h2>Duels</h2>
-        <p className="hint">2+ players, 5 problems, live leaderboard. Never solo.</p>
+      <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
+        <button onClick={() => setHomeLanguage(null)} className="link-btn">← Back</button>
+        <h2>{homeMode === 'duel' ? '1v1 Duel' : 'Tournament'} — Java</h2>
+        <p className="hint">
+          {homeMode === 'duel'
+            ? 'Exactly 2 players. Live leaderboard.'
+            : '2+ players, 5 problems, live leaderboard. Never solo.'}
+        </p>
         <div className="room-actions">
           <div>
-            <input placeholder="Duel name" value={roomName} onChange={(e) => setRoomName(e.target.value)} />
+            <input placeholder={homeMode === 'duel' ? 'Duel name' : 'Room name'} value={roomName} onChange={(e) => setRoomName(e.target.value)} />
             <button onClick={createRoom} disabled={!roomName.trim() || submittingHome}>
-              {submittingHome ? 'Creating...' : 'Create Duel'}
+              {submittingHome ? 'Creating...' : `Create ${homeMode === 'duel' ? 'Duel' : 'Room'}`}
             </button>
           </div>
           <div>
             <input placeholder="6-char code" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} />
             <button onClick={joinRoom} disabled={!joinCode.trim() || submittingHome}>
-              {submittingHome ? 'Joining...' : 'Join Duel'}
+              {submittingHome ? 'Joining...' : 'Join'}
             </button>
           </div>
         </div>
         {submittingHome && <p className="hint">If the backend was idle, this can take up to a minute to wake up.</p>}
         {error && <p className="error">{error}</p>}
-      </div>
+      </motion.div>
     );
   }
 
@@ -163,32 +210,52 @@ export default function Room() {
   const playerCount = state.leaderboard.length;
 
   if (state.room.status === 'waiting') {
+    const isDuel = state.room.isDuel;
+    const canStart = isDuel ? playerCount === 2 : playerCount >= 2;
+    const startReason = isDuel
+      ? (playerCount < 2 ? 'Waiting for opponent to join...' : playerCount > 2 ? 'A duel is 1v1 only.' : '')
+      : (playerCount < 2 ? 'Need at least 2 players to start.' : '');
+
     return (
-      <div className="page">
+      <motion.div className="page lobby" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
+        <span className={`mode-badge ${isDuel ? 'mode-badge-duel' : 'mode-badge-tournament'}`}>
+          {isDuel ? '⚔️ 1v1 Duel' : '🏆 Tournament'}
+        </span>
         <h2>{state.room.name}</h2>
-        <p>Share this code: <strong className="join-code">{state.room.joinCode}</strong></p>
-        <h3>Players ({playerCount})</h3>
-        <table>
-          <thead><tr><th>Player</th></tr></thead>
-          <tbody>
-            {state.leaderboard.map((row) => (
-              <tr key={row.username}>
-                <td>{row.username}{row.username === state.room.hostUsername ? ' (host)' : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <div className="lobby-code-card">
+          <span className="hint">Share this code</span>
+          <span className="lobby-code">{state.room.joinCode}</span>
+        </div>
+        <h3>Players ({playerCount}{isDuel ? '/2' : ''})</h3>
+        <div className="player-list">
+          {state.leaderboard.map((row) => (
+            <motion.div key={row.username} className="player-row"
+              initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}>
+              <span className="player-avatar">{row.username[0]?.toUpperCase()}</span>
+              <span>{row.username}</span>
+              {row.username === state.room.hostUsername && <span className="host-tag">host</span>}
+            </motion.div>
+          ))}
+          {isDuel && playerCount < 2 && (
+            <div className="player-row player-row-empty">
+              <span className="player-avatar player-avatar-empty">?</span>
+              <span className="hint">waiting for opponent...</span>
+            </div>
+          )}
+        </div>
         {isHost ? (
           <>
-            <button onClick={startDuel} disabled={playerCount < 2} className="start-btn">Start Duel</button>
-            {playerCount < 2 && <p className="hint">Need at least 2 players to start.</p>}
+            <button onClick={startDuel} disabled={!canStart} className="start-btn">
+              Start {isDuel ? 'Duel' : 'Tournament'}
+            </button>
+            {startReason && <p className="hint">{startReason}</p>}
           </>
         ) : (
           <p className="hint">Waiting for host to start...</p>
         )}
         {error && <p className="error">{error}</p>}
         <button onClick={leaveToHome} className="link-btn">Leave</button>
-      </div>
+      </motion.div>
     );
   }
 
