@@ -113,84 +113,37 @@ public class JudgeService {
     }
 
     private static final int STDOUT_CAP_BYTES = 2 * 1024 * 1024;
-    private volatile Boolean bwrapAvailable;
 
-    private boolean bwrapAvailable() {
-        if (bwrapAvailable == null) {
-            try {
-                Process p = new ProcessBuilder("sh", "-c", "command -v bwrap").start();
-                bwrapAvailable = p.waitFor(3, java.util.concurrent.TimeUnit.SECONDS) && p.exitValue() == 0;
-            } catch (Exception e) { bwrapAvailable = false; }
-        }
-        return bwrapAvailable;
-    }
-
-    /** Sandboxes a shell command: no network, no host env vars, read-only rootfs except the submission's own tmpDir, resource-limited. */
-    private List<String> sandboxed(Path tmpDir, String shellCmd, int memoryMb, String language) {
-        String javaHome = System.getProperty("java.home");
-        // ulimit -v (RLIMIT_AS) is incompatible with the JVM: it reserves far more virtual
-        // address space than it actually uses (compressed class space alone defaults to 1GB),
-        // so capping -v kills javac/java at startup regardless of memoryMb. Heap is capped via
-        // -Xmx instead for java; -v still applies for python/cpp, which don't have this issue.
+    /**
+     * bubblewrap (unprivileged user namespaces) does NOT work on Render — confirmed via live
+     * diagnostic: "bwrap: Creating new namespace failed: Operation not permitted". The platform
+     * blocks CLONE_NEWUSER outright, so no namespace-based sandbox is possible here without a
+     * separate VM. This is the fallback: no network/filesystem isolation (real gap, needs a
+     * dedicated judge host to close), but env vars are stripped from the child process (closes
+     * the credential-theft path — submitted code can no longer read SUPABASE_DB_PASSWORD/
+     * JWT_SECRET/REDIS_PASSWORD) and resource ulimits still apply, both of which need no special
+     * container permissions.
+     */
+    private ProcessBuilder guarded(Path tmpDir, String shellCmd, int memoryMb, String language) {
         String vlimit = "java".equals(language) ? "" : ("ulimit -v " + (memoryMb * 1024) + " 2>/dev/null; ");
-        String guarded = vlimit + "ulimit -u 32 2>/dev/null; ulimit -f 20480 2>/dev/null; " + shellCmd;
-        List<String> cmd = new ArrayList<>(List.of(
-            "bwrap",
-            "--ro-bind", "/usr", "/usr",
-            "--ro-bind", "/lib", "/lib",
-            "--ro-bind-try", "/lib64", "/lib64",
-            "--ro-bind-try", "/opt", "/opt",
-            "--ro-bind-try", "/etc", "/etc"));
-        if (javaHome != null && !javaHome.startsWith("/usr") && !javaHome.startsWith("/opt")) {
-            cmd.addAll(List.of("--ro-bind-try", javaHome, javaHome));
+        // ulimit -u (RLIMIT_NPROC) is per-UID system-wide, not scoped to this child's own process
+        // tree — it counts against every process this app (and everything else on the box) runs
+        // as the same user, so any low cap intermittently starves fork() for unrelated reasons.
+        // No unprivileged way to scope it to just the child without real cgroups, so it's dropped.
+        String cmd = vlimit + "ulimit -f 20480 2>/dev/null; " + shellCmd;
+        ProcessBuilder pb = new ProcessBuilder("sh", "-c", cmd);
+        pb.directory(tmpDir.toFile());
+        pb.environment().clear();
+        String path = System.getenv("PATH");
+        if (path != null) pb.environment().put("PATH", path);
+        if ("java".equals(language)) {
+            String javaHome = System.getProperty("java.home");
+            if (javaHome != null) pb.environment().put("JAVA_HOME", javaHome);
         }
-        cmd.addAll(List.of(
-            // --tmpfs /tmp must precede the tmpDir bind below — bwrap applies mounts in
-            // argument order, and tmpDir lives under /tmp, so a later tmpfs would shadow it.
-            "--tmpfs", "/tmp",
-            "--bind", tmpDir.toString(), tmpDir.toString(),
-            "--proc", "/proc",
-            "--dev", "/dev",
-            "--unshare-net",
-            "--unshare-pid",
-            "--die-with-parent",
-            "--new-session",
-            "--clearenv",
-            "--setenv", "PATH", javaHome + "/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "--setenv", "JAVA_HOME", javaHome,
-            "--chdir", tmpDir.toString(),
-            "sh", "-c", guarded
-        ));
-        return cmd;
-    }
-
-    /** Temporary diagnostic: runs the actual sandbox invocation and reports raw output, to debug why bwrap fails on a given host. */
-    public Map<String, Object> diagnoseSandbox() {
-        Map<String, Object> result = new java.util.LinkedHashMap<>();
-        try {
-            Process which = new ProcessBuilder("sh", "-c", "command -v bwrap; echo EXIT:$?").redirectErrorStream(true).start();
-            String whichOut = new String(which.getInputStream().readAllBytes());
-            which.waitFor();
-            result.put("which_bwrap", whichOut.trim());
-        } catch (Exception e) { result.put("which_bwrap_error", e.toString()); }
-
-        try {
-            Path tmp = Files.createTempDirectory("sandbox-diag");
-            List<String> cmd = sandboxed(tmp, "echo sandboxed-ok", 256, "python");
-            result.put("bwrap_cmd", cmd);
-            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
-            String out = new String(p.getInputStream().readAllBytes());
-            boolean finished = p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
-            result.put("bwrap_test_output", out.trim());
-            result.put("bwrap_test_exit", finished ? String.valueOf(p.exitValue()) : "timeout");
-            cleanup(tmp);
-        } catch (Exception e) { result.put("bwrap_test_error", e.toString()); }
-
-        return result;
+        return pb;
     }
 
     private RunResult run(String code, String language, String input, int timeLimitMs, int memoryMb) {
-        if (!bwrapAvailable()) return new RunResult("re", "", 0, "judge sandbox unavailable");
         try {
             Path tmpDir = Files.createTempDirectory("judge-" + UUID.randomUUID());
             String filename = switch (language) {
@@ -203,7 +156,7 @@ public class JudgeService {
                 case "java" -> "javac Main.java"; case "cpp" -> "g++ -O2 -o main main.cpp"; default -> null;
             };
             if (compileCmd != null) {
-                Process compile = new ProcessBuilder(sandboxed(tmpDir, compileCmd, memoryMb, language)).redirectErrorStream(true).start();
+                Process compile = guarded(tmpDir, compileCmd, memoryMb, language).redirectErrorStream(true).start();
                 BoundedOutputStream compileOut = new BoundedOutputStream(STDOUT_CAP_BYTES);
                 Thread compileDrain = new Thread(() -> { try { compile.getInputStream().transferTo(compileOut); } catch (IOException ignored) {} });
                 compileDrain.start();
@@ -217,7 +170,7 @@ public class JudgeService {
                 default -> throw new IllegalArgumentException();
             };
             long start = System.currentTimeMillis();
-            Process run = new ProcessBuilder(sandboxed(tmpDir, runCmd + " < input.txt", memoryMb, language)).redirectErrorStream(true).start();
+            Process run = guarded(tmpDir, runCmd + " < input.txt", memoryMb, language).redirectErrorStream(true).start();
             BoundedOutputStream stdoutBuf = new BoundedOutputStream(STDOUT_CAP_BYTES);
             Thread drain = new Thread(() -> { try { run.getInputStream().transferTo(stdoutBuf); } catch (IOException ignored) {} });
             drain.start();
