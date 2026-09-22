@@ -18,6 +18,8 @@ CREATE TABLE problems (
   time_limit_ms INTEGER NOT NULL DEFAULT 2000,
   memory_limit_mb INTEGER NOT NULL DEFAULT 256,
   is_active BOOLEAN NOT NULL DEFAULT true,
+  tags TEXT,
+  rating INTEGER NOT NULL DEFAULT 1200,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
@@ -48,6 +50,8 @@ CREATE TABLE room_participants (
   score INTEGER NOT NULL DEFAULT 0,
   rank INTEGER,
   joined_at TIMESTAMP NOT NULL DEFAULT now(),
+  solved_count INTEGER NOT NULL DEFAULT 0,
+  last_solve_at TIMESTAMP,
   PRIMARY KEY (room_id, user_id)
 );
 
@@ -71,3 +75,7 @@ CREATE TABLE submissions (
   memory_kb INTEGER,
   submitted_at TIMESTAMP NOT NULL DEFAULT now()
 );
+
+CREATE INDEX IF NOT EXISTS idx_sub_room ON submissions(room_id);
+CREATE INDEX IF NOT EXISTS idx_sub_user_problem ON submissions(user_id, problem_id);
+CREATE INDEX IF NOT EXISTS idx_tc_problem ON test_cases(problem_id);

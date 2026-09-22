@@ -17,13 +17,15 @@ public class RoomController {
     private final RoomParticipantRepository participantRepo;
     private final RoomProblemRepository roomProblemRepo;
     private final ProblemRepository problemRepo;
+    private final SubmissionRepository submissionRepo;
     private final SimpMessagingTemplate ws;
 
     public RoomController(RoomRepository roomRepo, RoomParticipantRepository participantRepo,
                            RoomProblemRepository roomProblemRepo, ProblemRepository problemRepo,
-                           SimpMessagingTemplate ws) {
+                           SubmissionRepository submissionRepo, SimpMessagingTemplate ws) {
         this.roomRepo = roomRepo; this.participantRepo = participantRepo;
-        this.roomProblemRepo = roomProblemRepo; this.problemRepo = problemRepo; this.ws = ws;
+        this.roomProblemRepo = roomProblemRepo; this.problemRepo = problemRepo;
+        this.submissionRepo = submissionRepo; this.ws = ws;
     }
 
     @PostMapping
@@ -81,13 +83,70 @@ public class RoomController {
                 .toList();
     }
 
+    @GetMapping("/{id}/state")
+    @Transactional(readOnly = true)
+    public ResponseEntity<?> state(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        return roomRepo.findById(id).map(room -> {
+            List<Submission> accepted = submissionRepo.findByRoomId(id).stream()
+                    .filter(s -> "accepted".equals(s.getVerdict())).toList();
+
+            Map<UUID, List<String>> solvedByProblem = new HashMap<>();
+            for (Submission s : accepted) {
+                solvedByProblem.computeIfAbsent(s.getProblem().getId(), k -> new ArrayList<>()).add(s.getUser().getUsername());
+            }
+
+            List<Map<String, Object>> problems = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).stream().map(rp -> {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("problemId", rp.getProblem().getId());
+                m.put("slug", rp.getProblem().getSlug());
+                m.put("title", rp.getProblem().getTitle());
+                m.put("difficulty", rp.getProblem().getDifficulty());
+                m.put("points", rp.getPoints());
+                m.put("sortOrder", rp.getSortOrder());
+                m.put("solvedBy", solvedByProblem.getOrDefault(rp.getProblem().getId(), List.of()));
+                return m;
+            }).toList();
+
+            List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(id);
+            List<Map<String, Object>> leaderboardList = new ArrayList<>();
+            for (int i = 0; i < ranked.size(); i++) {
+                RoomParticipant p = ranked.get(i);
+                leaderboardList.add(Map.of("username", p.getUser().getUsername(), "score", p.getScore(),
+                        "solvedCount", p.getSolvedCount(), "rank", i + 1));
+            }
+
+            RoomParticipant mine = participantRepo.findByRoomIdAndUserId(id, user.getId()).orElse(null);
+            Map<String, Object> me = new LinkedHashMap<>();
+            me.put("username", user.getUsername());
+            me.put("score", mine != null ? mine.getScore() : 0);
+            me.put("solved", accepted.stream().filter(s -> s.getUser().getId().equals(user.getId()))
+                    .map(s -> s.getProblem().getSlug()).distinct().toList());
+
+            Map<String, Object> roomInfo = new LinkedHashMap<>();
+            roomInfo.put("id", room.getId());
+            roomInfo.put("name", room.getName());
+            roomInfo.put("joinCode", room.getJoinCode());
+            roomInfo.put("status", room.getStatus());
+            roomInfo.put("startTime", room.getStartTime());
+            roomInfo.put("endTime", room.getEndTime());
+            roomInfo.put("durationMinutes", room.getDurationMinutes());
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("room", roomInfo);
+            result.put("problems", problems);
+            result.put("leaderboard", leaderboardList);
+            result.put("me", me);
+            return ResponseEntity.<Object>ok(result);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/{id}/start")
     @Transactional
     public ResponseEntity<?> start(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(r -> {
             if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
             if (participantRepo.findByRoomIdOrderByScoreDesc(id).size() < 2)
-                return ResponseEntity.badRequest().<Object>body("Need at least 2 players to start");
+                return ResponseEntity.status(409).<Object>body(Map.of("error", "A duel needs at least 2 players"));
 
             if (roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).isEmpty()) autoAssignProblems(r);
 
@@ -100,12 +159,35 @@ public class RoomController {
     }
 
     private void autoAssignProblems(Room room) {
-        List<Problem> pool = new ArrayList<>(problemRepo.findByIsActiveTrue());
-        Collections.shuffle(pool);
-        int count = Math.min(room.getProblemCount(), pool.size());
-        for (int i = 0; i < count; i++) {
+        int count = room.getProblemCount();
+        int easyTarget = Math.round(count * 0.4f);
+        int mediumTarget = Math.round(count * 0.4f);
+        int hardTarget = count - easyTarget - mediumTarget;
+
+        List<Problem> easy = new ArrayList<>(problemRepo.findByDifficultyAndIsActiveTrue("easy"));
+        List<Problem> medium = new ArrayList<>(problemRepo.findByDifficultyAndIsActiveTrue("medium"));
+        List<Problem> hard = new ArrayList<>(problemRepo.findByDifficultyAndIsActiveTrue("hard"));
+        Collections.shuffle(easy); Collections.shuffle(medium); Collections.shuffle(hard);
+
+        List<Problem> selected = new ArrayList<>();
+        selected.addAll(easy.subList(0, Math.min(easyTarget, easy.size())));
+        selected.addAll(medium.subList(0, Math.min(mediumTarget, medium.size())));
+        selected.addAll(hard.subList(0, Math.min(hardTarget, hard.size())));
+
+        if (selected.size() < count) {
+            List<Problem> leftover = new ArrayList<>(problemRepo.findByIsActiveTrue());
+            leftover.removeAll(selected);
+            Collections.shuffle(leftover);
+            for (Problem p : leftover) {
+                if (selected.size() >= count) break;
+                selected.add(p);
+            }
+        }
+        Collections.shuffle(selected);
+
+        for (int i = 0; i < selected.size(); i++) {
             RoomProblem rp = new RoomProblem();
-            rp.setRoom(room); rp.setProblem(pool.get(i)); rp.setPoints(100); rp.setSortOrder(i);
+            rp.setRoom(room); rp.setProblem(selected.get(i)); rp.setPoints(100); rp.setSortOrder(i);
             roomProblemRepo.save(rp);
         }
     }
@@ -113,11 +195,12 @@ public class RoomController {
     @GetMapping("/{id}/leaderboard")
     @Transactional(readOnly = true)
     public List<Map<String, Object>> leaderboard(@PathVariable UUID id) {
-        List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDesc(id);
+        List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(id);
         List<Map<String, Object>> result = new ArrayList<>();
         for (int i = 0; i < ranked.size(); i++) {
             RoomParticipant p = ranked.get(i);
-            result.add(Map.of("username", p.getUser().getUsername(), "score", p.getScore(), "rank", i + 1));
+            result.add(Map.of("username", p.getUser().getUsername(), "score", p.getScore(),
+                    "solvedCount", p.getSolvedCount(), "rank", i + 1));
         }
         return result;
     }

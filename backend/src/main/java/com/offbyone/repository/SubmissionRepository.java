@@ -11,4 +11,5 @@ public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
     List<Submission> findByRoomId(UUID roomId);
     List<Submission> findByUserIdAndProblemId(UUID userId, UUID problemId);
     List<Submission> findByRoomIdAndProblemIdAndUserId(UUID roomId, UUID problemId, UUID userId);
+    List<Submission> findByRoomIdAndProblemIdAndVerdict(UUID roomId, UUID problemId, String verdict);
 }

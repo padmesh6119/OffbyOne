@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface RoomParticipantRepository extends JpaRepository<RoomParticipant, RoomParticipantId> {
     Optional<RoomParticipant> findByRoomIdAndUserId(UUID roomId, UUID userId);
     List<RoomParticipant> findByRoomIdOrderByScoreDesc(UUID roomId);
+    List<RoomParticipant> findByRoomIdOrderByScoreDescLastSolveAtAsc(UUID roomId);
 }

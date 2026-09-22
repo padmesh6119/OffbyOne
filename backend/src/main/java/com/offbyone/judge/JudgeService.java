@@ -1,6 +1,7 @@
 package com.offbyone.judge;
 
 import com.offbyone.model.Problem;
+import com.offbyone.model.Room;
 import com.offbyone.model.RoomParticipant;
 import com.offbyone.model.Submission;
 import com.offbyone.model.TestCase;
@@ -58,6 +59,7 @@ public class JudgeService {
 
         if (submission.getRoom() != null) {
             if ("accepted".equals(verdict)) awardPoints(submission);
+            else if ("wrong_answer".equals(verdict)) applyWrongAnswerPenalty(submission);
             ws.convertAndSend("/topic/room/" + submission.getRoom().getId() + "/submission",
                 Map.of("submissionId", submission.getId(), "userId", submission.getUser().getId(),
                        "problemId", submission.getProblem().getId(), "verdict", verdict));
@@ -70,14 +72,43 @@ public class JudgeService {
             .anyMatch(s -> "accepted".equals(s.getVerdict()) && !s.getId().equals(submission.getId()));
         if (alreadySolved) return;
 
-        int points = roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId).map(rp -> rp.getPoints()).orElse(100);
+        boolean firstBlood = submissionRepo.findByRoomIdAndProblemIdAndVerdict(roomId, problemId, "accepted").stream()
+            .noneMatch(s -> !s.getId().equals(submission.getId()));
+
+        int basePoints = roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId).map(rp -> rp.getPoints()).orElse(100);
+        Room room = submission.getRoom();
+        int points = basePoints;
+        if (room.getStartTime() != null && room.getEndTime() != null) {
+            long totalMs = java.time.Duration.between(room.getStartTime(), room.getEndTime()).toMillis();
+            if (totalMs > 0) {
+                long elapsedMs = java.time.Duration.between(room.getStartTime(), java.time.LocalDateTime.now()).toMillis();
+                double ratio = Math.min(1.0, Math.max(0.0, (double) elapsedMs / totalMs));
+                points = (int) Math.floor(basePoints * (1 - ratio * 0.5));
+            }
+        }
+        if (firstBlood) points += 50;
+
         RoomParticipant participant = participantRepo.findByRoomIdAndUserId(roomId, userId).orElseGet(() -> {
             RoomParticipant p = new RoomParticipant();
-            p.setRoom(submission.getRoom()); p.setUser(submission.getUser());
+            p.setRoom(room); p.setUser(submission.getUser());
             return p;
         });
         participant.setScore(participant.getScore() + points);
+        participant.setSolvedCount(participant.getSolvedCount() + 1);
+        participant.setLastSolveAt(java.time.LocalDateTime.now());
         participantRepo.save(participant);
+    }
+
+    private void applyWrongAnswerPenalty(Submission submission) {
+        UUID roomId = submission.getRoom().getId(), problemId = submission.getProblem().getId(), userId = submission.getUser().getId();
+        boolean alreadySolved = submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, problemId, userId).stream()
+            .anyMatch(s -> "accepted".equals(s.getVerdict()));
+        if (alreadySolved) return;
+
+        participantRepo.findByRoomIdAndUserId(roomId, userId).ifPresent(p -> {
+            p.setScore(Math.max(0, p.getScore() - 5));
+            participantRepo.save(p);
+        });
     }
 
     private RunResult run(String code, String language, String input, int timeLimitMs, int memoryMb) {

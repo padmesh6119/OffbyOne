@@ -16,6 +16,8 @@ public class RoomParticipant {
     private int score = 0;
     private Integer rank;
     @Column(name = "joined_at") private LocalDateTime joinedAt = LocalDateTime.now();
+    @Column(name = "solved_count") private int solvedCount = 0;
+    @Column(name = "last_solve_at") private LocalDateTime lastSolveAt;
 
     public Room getRoom() { return room; }
     public void setRoom(Room v) { this.room = v; }
@@ -26,4 +28,8 @@ public class RoomParticipant {
     public Integer getRank() { return rank; }
     public void setRank(Integer v) { this.rank = v; }
     public LocalDateTime getJoinedAt() { return joinedAt; }
+    public int getSolvedCount() { return solvedCount; }
+    public void setSolvedCount(int v) { this.solvedCount = v; }
+    public LocalDateTime getLastSolveAt() { return lastSolveAt; }
+    public void setLastSolveAt(LocalDateTime v) { this.lastSolveAt = v; }
 }
