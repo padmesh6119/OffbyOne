@@ -11,4 +11,5 @@ public interface RoomParticipantRepository extends JpaRepository<RoomParticipant
     Optional<RoomParticipant> findByRoomIdAndUserId(UUID roomId, UUID userId);
     List<RoomParticipant> findByRoomIdOrderByScoreDesc(UUID roomId);
     List<RoomParticipant> findByRoomIdOrderByScoreDescLastSolveAtAsc(UUID roomId);
+    List<RoomParticipant> findByUserId(UUID userId);
 }

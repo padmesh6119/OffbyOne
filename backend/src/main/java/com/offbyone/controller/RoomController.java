@@ -210,8 +210,11 @@ public class RoomController {
             boolean isDuel = room.getProblemCount() == 1;
             if (isDuel && "active".equals(room.getStatus())) {
                 room.setStatus("finished");
-                roomRepo.save(room);
                 List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(id);
+                ranked.stream().map(RoomParticipant::getUser)
+                        .filter(u -> !u.getId().equals(user.getId())).findFirst()
+                        .ifPresent(room::setWinner); // opponent wins by forfeit, regardless of score at the time
+                roomRepo.save(room);
                 List<Map<String, Object>> standings = new ArrayList<>();
                 for (int i = 0; i < ranked.size(); i++) {
                     RoomParticipant p = ranked.get(i);

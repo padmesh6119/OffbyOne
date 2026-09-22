@@ -22,6 +22,8 @@ public class Room {
     @JoinColumn(name = "current_problem_id") private Problem currentProblem;
     @Column(name = "current_sql_slug") private String currentSqlSlug;
     @Column(name = "rounds_played") private int roundsPlayed = 0;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "winner_user_id") private User winner;
     @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
 
     public UUID getId() { return id; }
@@ -50,4 +52,6 @@ public class Room {
     public void setCurrentSqlSlug(String v) { this.currentSqlSlug = v; }
     public int getRoundsPlayed() { return roundsPlayed; }
     public void setRoundsPlayed(int v) { this.roundsPlayed = v; }
+    public User getWinner() { return winner; }
+    public void setWinner(User v) { this.winner = v; }
 }

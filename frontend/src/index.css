@@ -227,6 +227,21 @@ tr.winner td { color: var(--color-primary); font-weight: 700; }
 .results-screen { text-align: center; }
 .trophy-wrap { font-size: 4rem; margin-bottom: 0.5rem; }
 
+/* Profile page */
+.profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.profile-card { background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px;
+  padding: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.profile-stat { font-size: 2rem; font-weight: 800; color: var(--color-text); }
+.rating-sparkline { width: 100%; height: 60px; margin-top: 0.25rem; }
+.split-bar { display: flex; height: 0.6rem; border-radius: 999px; overflow: hidden; background: var(--color-surface-2); }
+.split-bar-java { background: var(--color-primary); }
+.split-bar-sql { background: var(--color-accent); }
+.daily-challenge-card { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem;
+  width: 100%; text-align: left; background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: 12px; padding: 1.25rem; margin-bottom: 1.5rem; cursor: pointer; font-family: inherit;
+  transition: border-color 0.15s ease; }
+.daily-challenge-card:hover { border-color: var(--color-primary); }
+
 /* SQL mode */
 .sql-schema-table { margin: 1rem 0; }
 .sql-schema-table h4 { margin-bottom: 0.4rem; font-size: 0.9rem; color: var(--color-text-muted); }

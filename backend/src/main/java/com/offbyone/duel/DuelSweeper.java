@@ -1,8 +1,10 @@
 package com.offbyone.duel;
 
+import com.offbyone.model.RatingHistory;
 import com.offbyone.model.Room;
 import com.offbyone.model.RoomParticipant;
 import com.offbyone.model.User;
+import com.offbyone.repository.RatingHistoryRepository;
 import com.offbyone.repository.RoomParticipantRepository;
 import com.offbyone.repository.RoomProblemRepository;
 import com.offbyone.repository.RoomRepository;
@@ -27,12 +29,15 @@ public class DuelSweeper {
     private final RoomParticipantRepository participantRepo;
     private final RoomProblemRepository roomProblemRepo;
     private final UserRepository userRepo;
+    private final RatingHistoryRepository ratingHistoryRepo;
     private final SimpMessagingTemplate ws;
 
     public DuelSweeper(RoomRepository roomRepo, RoomParticipantRepository participantRepo,
-                        RoomProblemRepository roomProblemRepo, UserRepository userRepo, SimpMessagingTemplate ws) {
+                        RoomProblemRepository roomProblemRepo, UserRepository userRepo,
+                        RatingHistoryRepository ratingHistoryRepo, SimpMessagingTemplate ws) {
         this.roomRepo = roomRepo; this.participantRepo = participantRepo;
-        this.roomProblemRepo = roomProblemRepo; this.userRepo = userRepo; this.ws = ws;
+        this.roomProblemRepo = roomProblemRepo; this.userRepo = userRepo;
+        this.ratingHistoryRepo = ratingHistoryRepo; this.ws = ws;
     }
 
     @Scheduled(fixedDelay = 15000)
@@ -53,9 +58,10 @@ public class DuelSweeper {
             if (!timeUp && !allSolved) continue;
 
             room.setStatus("finished");
+            if (!ranked.isEmpty()) room.setWinner(ranked.get(0).getUser());
             roomRepo.save(room);
 
-            Map<UUID, Integer> ratingDeltas = applyElo(ranked);
+            Map<UUID, Integer> ratingDeltas = applyElo(room, ranked);
 
             List<Map<String, Object>> standings = new ArrayList<>();
             for (int i = 0; i < ranked.size(); i++) {
@@ -71,7 +77,7 @@ public class DuelSweeper {
     }
 
     /** Pairwise Elo (K=32): each participant plays every other as a virtual 1v1, decided by final score. */
-    private Map<UUID, Integer> applyElo(List<RoomParticipant> ranked) {
+    private Map<UUID, Integer> applyElo(Room room, List<RoomParticipant> ranked) {
         Map<UUID, Integer> deltas = new HashMap<>();
         if (ranked.size() < 2) return deltas;
 
@@ -87,8 +93,13 @@ public class DuelSweeper {
         }
         for (RoomParticipant p : ranked) {
             User u = p.getUser();
-            u.setRating(u.getRating() + deltas.get(u.getId()));
+            int delta = deltas.get(u.getId());
+            u.setRating(u.getRating() + delta);
             userRepo.save(u);
+
+            RatingHistory rh = new RatingHistory();
+            rh.setUser(u); rh.setRoom(room); rh.setRating(u.getRating()); rh.setDelta(delta);
+            ratingHistoryRepo.save(rh);
         }
         return deltas;
     }

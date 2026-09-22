@@ -4,6 +4,7 @@ import Problems from './pages/Problems';
 import ProblemDetail from './pages/ProblemDetail';
 import Room from './pages/Room';
 import SqlPractice from './pages/SqlPractice';
+import Profile from './pages/Profile';
 import './index.css';
 
 function Nav() {
@@ -13,6 +14,7 @@ function Nav() {
       <Link to="/">OffByOne</Link>
       <Link to="/sql">SQL Duels</Link>
       <Link to="/problems">Practice</Link>
+      <Link to="/profile">Profile</Link>
       {username && <span className="nav-user">👤 {username}</span>}
       <button onClick={() => { localStorage.clear(); location.href = '/'; }}>Leave</button>
     </nav>
@@ -33,6 +35,7 @@ export default function App() {
         <Route path="/sql" element={<Guard><SqlPractice /></Guard>} />
         <Route path="/problems" element={<Guard><Problems /></Guard>} />
         <Route path="/problem/:slug" element={<Guard><ProblemDetail /></Guard>} />
+        <Route path="/profile" element={<Guard><Profile /></Guard>} />
       </Routes>
     </BrowserRouter>
   );

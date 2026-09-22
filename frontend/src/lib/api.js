@@ -31,6 +31,10 @@ export const api = {
   sqlProblems: () => req('/api/sql-problems'),
   sqlProblem: (slug) => req(`/api/sql-problems/${slug}`),
   sqlSubmit: (slug, query) => req(`/api/sql-problems/${slug}/submit`, { method: 'POST', body: JSON.stringify({ query }) }),
+  profile: (username) => req(`/api/users/${username}/profile`),
+  rivals: (username) => req(`/api/users/${username}/rivals`),
+  streak: () => req('/api/streak'),
+  dailyChallenge: () => req('/api/daily-challenge'),
 };
 
 export function errorMessage(err) {

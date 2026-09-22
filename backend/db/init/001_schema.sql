@@ -45,8 +45,19 @@ CREATE TABLE rooms (
   current_problem_id UUID REFERENCES problems(id),
   current_sql_slug VARCHAR(100),
   rounds_played INTEGER NOT NULL DEFAULT 0,
+  winner_user_id UUID REFERENCES users(id),
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
+
+CREATE TABLE rating_history (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id),
+  room_id UUID REFERENCES rooms(id),
+  rating INTEGER NOT NULL,
+  delta INTEGER NOT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_rating_history_user ON rating_history(user_id, created_at);
 
 CREATE TABLE room_participants (
   room_id UUID NOT NULL REFERENCES rooms(id),
