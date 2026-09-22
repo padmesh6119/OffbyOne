@@ -11,6 +11,8 @@ import com.offbyone.repository.RoomParticipantRepository;
 import com.offbyone.repository.RoomProblemRepository;
 import com.offbyone.repository.SubmissionRepository;
 import com.offbyone.repository.TestCaseRepository;
+import com.offbyone.sql.SqlJudge;
+import com.offbyone.sql.SqlProblem;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Async;
@@ -41,16 +43,44 @@ public class JudgeService {
     private final SimpMessagingTemplate ws;
     private final ObjectMapper json;
     private final DuelRoundService duelRoundService;
+    private final SqlJudge sqlJudge;
 
     @Value("${judge0.api.key:}")
     private String apiKey;
 
     public JudgeService(SubmissionRepository submissionRepo, TestCaseRepository testCaseRepo,
                          RoomParticipantRepository participantRepo, RoomProblemRepository roomProblemRepo,
-                         SimpMessagingTemplate ws, ObjectMapper json, DuelRoundService duelRoundService) {
+                         SimpMessagingTemplate ws, ObjectMapper json, DuelRoundService duelRoundService, SqlJudge sqlJudge) {
         this.submissionRepo = submissionRepo; this.testCaseRepo = testCaseRepo;
         this.participantRepo = participantRepo; this.roomProblemRepo = roomProblemRepo;
-        this.ws = ws; this.json = json; this.duelRoundService = duelRoundService;
+        this.ws = ws; this.json = json; this.duelRoundService = duelRoundService; this.sqlJudge = sqlJudge;
+    }
+
+    /** SQL submissions judge synchronously (in-memory SQLite, no external API) then run the same
+     * room scoring path as Java submissions — see awardPoints()/applyWrongAnswerPenalty(). */
+    @Async
+    public void judgeSql(Submission submission, SqlProblem sqlProblem) {
+        SqlJudge.Verdict v = sqlJudge.judge(sqlProblem, submission.getCode());
+        submission.setVerdict(v.status());
+        submissionRepo.save(submission);
+
+        Map<String, Object> verdictPayload = new java.util.LinkedHashMap<>();
+        verdictPayload.put("verdict", v.status()); verdictPayload.put("message", v.message());
+        if (v.actualColumns() != null) verdictPayload.put("actual", Map.of("columns", v.actualColumns(), "rows", v.actualRows()));
+        if (v.expectedColumns() != null) verdictPayload.put("expected", Map.of("columns", v.expectedColumns(), "rows", v.expectedRows()));
+        ws.convertAndSend("/topic/submission/" + submission.getId(), verdictPayload);
+
+        if (submission.getRoom() != null) {
+            boolean firstBlood = false;
+            if ("accepted".equals(v.status())) firstBlood = awardPoints(submission);
+            else if ("wrong_answer".equals(v.status())) applyWrongAnswerPenalty(submission);
+            Map<String, Object> roomPayload = new java.util.LinkedHashMap<>();
+            roomPayload.put("submissionId", submission.getId()); roomPayload.put("userId", submission.getUser().getId());
+            roomPayload.put("username", submission.getUser().getUsername());
+            roomPayload.put("sqlSlug", submission.getSqlSlug()); roomPayload.put("verdict", v.status());
+            if (firstBlood) roomPayload.put("firstBlood", true);
+            ws.convertAndSend("/topic/room/" + submission.getRoom().getId() + "/submission", roomPayload);
+        }
     }
 
     @Async
@@ -111,12 +141,20 @@ public class JudgeService {
 
     /** @return true if this submission was the first accepted solve for its problem in this room. */
     private boolean awardPoints(Submission submission) {
-        UUID roomId = submission.getRoom().getId(), problemId = submission.getProblem().getId(), userId = submission.getUser().getId();
-        boolean alreadySolved = submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, problemId, userId).stream()
+        UUID roomId = submission.getRoom().getId(), userId = submission.getUser().getId();
+        boolean isSql = submission.getProblem() == null;
+        UUID problemId = isSql ? null : submission.getProblem().getId();
+        String sqlSlug = submission.getSqlSlug();
+
+        boolean alreadySolved = (isSql
+                ? submissionRepo.findByRoomIdAndSqlSlugAndUserId(roomId, sqlSlug, userId)
+                : submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, problemId, userId)).stream()
             .anyMatch(s -> "accepted".equals(s.getVerdict()) && !s.getId().equals(submission.getId()));
         if (alreadySolved) return false;
 
-        boolean firstBlood = submissionRepo.findByRoomIdAndProblemIdAndVerdict(roomId, problemId, "accepted").stream()
+        boolean firstBlood = (isSql
+                ? submissionRepo.findByRoomIdAndSqlSlugAndVerdict(roomId, sqlSlug, "accepted")
+                : submissionRepo.findByRoomIdAndProblemIdAndVerdict(roomId, problemId, "accepted")).stream()
             .noneMatch(s -> !s.getId().equals(submission.getId()));
 
         Room room = submission.getRoom();
@@ -125,7 +163,9 @@ public class JudgeService {
             return firstBlood; // duel mode: only the round winner scores, no decay/bonus scoring below
         }
 
-        int basePoints = roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId).map(rp -> rp.getPoints()).orElse(100);
+        int basePoints = (isSql
+                ? roomProblemRepo.findByRoomIdAndSqlSlug(roomId, sqlSlug)
+                : roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId)).map(rp -> rp.getPoints()).orElse(100);
         int points = basePoints;
         if (room.getStartTime() != null && room.getEndTime() != null) {
             long totalMs = java.time.Duration.between(room.getStartTime(), room.getEndTime()).toMillis();
@@ -183,8 +223,11 @@ public class JudgeService {
 
     private void applyWrongAnswerPenalty(Submission submission) {
         if (submission.getRoom().getProblemCount() == 1) return; // no WA penalty in round-based duel mode
-        UUID roomId = submission.getRoom().getId(), problemId = submission.getProblem().getId(), userId = submission.getUser().getId();
-        boolean alreadySolved = submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, problemId, userId).stream()
+        UUID roomId = submission.getRoom().getId(), userId = submission.getUser().getId();
+        boolean isSql = submission.getProblem() == null;
+        boolean alreadySolved = (isSql
+                ? submissionRepo.findByRoomIdAndSqlSlugAndUserId(roomId, submission.getSqlSlug(), userId)
+                : submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, submission.getProblem().getId(), userId)).stream()
             .anyMatch(s -> "accepted".equals(s.getVerdict()));
         if (alreadySolved) return;
 

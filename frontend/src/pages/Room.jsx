@@ -7,6 +7,8 @@ import { STARTERS } from '../lib/starters';
 import DuelScreen from './DuelScreen';
 import ResultsScreen from './ResultsScreen';
 import JudgeFeedback from '../components/JudgeFeedback';
+import SqlVerdict from '../components/SqlVerdict';
+import SqlResultTable from '../components/SqlResultTable';
 
 export default function Room() {
   const [roomId, setRoomId] = useState(null);
@@ -31,6 +33,7 @@ export default function Room() {
   const [firstBlood, setFirstBlood] = useState(false);
   const [problemDetail, setProblemDetail] = useState(null);
   const [samples, setSamples] = useState([]);
+  const [sqlProblemDetail, setSqlProblemDetail] = useState(null);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const username = localStorage.getItem('username');
@@ -78,13 +81,19 @@ export default function Room() {
 
   // fetch problem statement + samples when active tab changes
   const activeSlug = selectedSlug || state?.problems?.[0]?.slug || null;
+  const activeType = state?.problems?.find((p) => p.slug === activeSlug)?.type || 'java';
   useEffect(() => {
     if (!activeSlug) return;
     setProblemDetail(null);
     setSamples([]);
-    api.problem(activeSlug).then(setProblemDetail).catch(() => {});
-    api.samples(activeSlug).then(setSamples).catch(() => {});
-  }, [activeSlug]);
+    setSqlProblemDetail(null);
+    if (activeType === 'sql') {
+      api.sqlProblem(activeSlug).then(setSqlProblemDetail).catch(() => {});
+    } else {
+      api.problem(activeSlug).then(setProblemDetail).catch(() => {});
+      api.samples(activeSlug).then(setSamples).catch(() => {});
+    }
+  }, [activeSlug, activeType]);
 
   async function createRoom() {
     setError('');
@@ -123,9 +132,13 @@ export default function Room() {
     setVerdict(null);
     setProgress(null);
     try {
-      const code = codeBySlug[activeSlug] ?? STARTERS[lang];
-      const { submissionId } = await api.submit({ slug: activeSlug, roomId, language: lang, code });
-      const progressSub = subscribe(`/topic/submission/${submissionId}/progress`, (data) => setProgress(data));
+      const isSqlTab = activeType === 'sql';
+      const code = codeBySlug[activeSlug] ?? (isSqlTab ? '' : STARTERS[lang]);
+      const body = isSqlTab
+        ? { slug: activeSlug, roomId, language: 'sql', code }
+        : { slug: activeSlug, roomId, language: lang, code };
+      const { submissionId } = await api.submit(body);
+      const progressSub = isSqlTab ? null : subscribe(`/topic/submission/${submissionId}/progress`, (data) => setProgress(data));
       const sub = subscribe(`/topic/submission/${submissionId}`, (data) => {
         setVerdict(data);
         setSubmitting(false);
@@ -144,7 +157,7 @@ export default function Room() {
     if (roomId) { try { await api.leaveRoom(roomId); } catch { /* leaving regardless */ } }
     setRoomId(null); setState(null); setFinalStandings(null);
     setSelectedSlug(null); setVerdict(null); setCodeBySlug({});
-    setProblemDetail(null); setSamples([]); setError(''); setHomeMode(null); setHomeLanguage(null);
+    setProblemDetail(null); setSamples([]); setSqlProblemDetail(null); setError(''); setHomeMode(null); setHomeLanguage(null);
     setRoomName(''); setJoinCode('');
   }
 
@@ -336,7 +349,7 @@ export default function Room() {
               <button key={p.slug}
                 className={`duel-tab ${p.slug === activeSlug ? 'active' : ''} ${mySolved.has(p.slug) ? 'solved' : ''}`}
                 onClick={() => { setSelectedSlug(p.slug); setVerdict(null); }}>
-                {mySolved.has(p.slug) ? '✓ ' : ''}{p.title}
+                {mySolved.has(p.slug) ? '✓ ' : ''}{p.type === 'sql' ? '🗄️ ' : ''}{p.title}
                 <span className={`diff-${p.difficulty}`}> ({p.difficulty})</span>
               </button>
             ))}
@@ -345,38 +358,58 @@ export default function Room() {
             <>
               <div className="statement-panel">
                 <h3>{problem.title}</h3>
-                {problemDetail ? (
-                  <>
-                    <div className="statement">
-                      {problemDetail.statement.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
-                    </div>
-                    {samples.map((tc, i) => (
-                      <div key={i} className="sample">
-                        <pre><strong>Sample Input {i + 1}</strong>{'\n'}{tc.input}</pre>
-                        <pre><strong>Sample Output {i + 1}</strong>{'\n'}{tc.expectedOutput}</pre>
+                {activeType === 'sql' ? (
+                  sqlProblemDetail ? (
+                    <>
+                      <div className="statement">
+                        {sqlProblemDetail.task.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
                       </div>
-                    ))}
-                  </>
-                ) : <div className="hint">Loading...</div>}
+                      {(sqlProblemDetail.tables || []).map((t) => (
+                        <div key={t.name} className="sql-schema-table">
+                          <h4>📋 {t.name}</h4>
+                          <SqlResultTable columns={t.columns} rows={t.rows} />
+                        </div>
+                      ))}
+                    </>
+                  ) : <div className="hint">Loading...</div>
+                ) : (
+                  problemDetail ? (
+                    <>
+                      <div className="statement">
+                        {problemDetail.statement.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+                      </div>
+                      {samples.map((tc, i) => (
+                        <div key={i} className="sample">
+                          <pre><strong>Sample Input {i + 1}</strong>{'\n'}{tc.input}</pre>
+                          <pre><strong>Sample Output {i + 1}</strong>{'\n'}{tc.expectedOutput}</pre>
+                        </div>
+                      ))}
+                    </>
+                  ) : <div className="hint">Loading...</div>
+                )}
               </div>
-              <div className="lang-pills">
-                {['java', 'python', 'cpp'].map((l) => (
-                  <button key={l} className={`lang-pill ${lang === l ? 'active' : ''}`} onClick={() => setLang(l)}>
-                    {l === 'cpp' ? 'C++' : l[0].toUpperCase() + l.slice(1)}
-                  </button>
-                ))}
-              </div>
+              {activeType !== 'sql' && (
+                <div className="lang-pills">
+                  {['java', 'python', 'cpp'].map((l) => (
+                    <button key={l} className={`lang-pill ${lang === l ? 'active' : ''}`} onClick={() => setLang(l)}>
+                      {l === 'cpp' ? 'C++' : l[0].toUpperCase() + l.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              )}
               <Editor
                 height="38vh"
-                language={lang === 'cpp' ? 'cpp' : lang}
-                value={codeBySlug[activeSlug] ?? STARTERS[lang]}
+                language={activeType === 'sql' ? 'sql' : (lang === 'cpp' ? 'cpp' : lang)}
+                value={codeBySlug[activeSlug] ?? (activeType === 'sql' ? '' : STARTERS[lang])}
                 onChange={(v) => setCodeBySlug((prev) => ({ ...prev, [activeSlug]: v }))}
                 theme="vs-dark"
               />
               <button className="duel-submit-btn" onClick={submit} disabled={submitting}>
                 {submitting ? 'Judging...' : 'Submit'}
               </button>
-              <JudgeFeedback submitting={submitting} progress={progress} verdict={verdict} />
+              {activeType === 'sql'
+                ? <SqlVerdict submitting={submitting} verdict={verdict} />
+                : <JudgeFeedback submitting={submitting} progress={progress} verdict={verdict} />}
               {error && <p className="error">{error}</p>}
             </>
           )}

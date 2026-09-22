@@ -3,6 +3,8 @@ package com.offbyone.controller;
 import com.offbyone.duel.DuelRoundService;
 import com.offbyone.model.*;
 import com.offbyone.repository.*;
+import com.offbyone.sql.SqlProblem;
+import com.offbyone.sql.SqlProblemBank;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,16 +20,17 @@ public class RoomController {
     private final RoomParticipantRepository participantRepo;
     private final RoomProblemRepository roomProblemRepo;
     private final ProblemRepository problemRepo;
+    private final SqlProblemBank sqlProblemBank;
     private final SubmissionRepository submissionRepo;
     private final DuelRoundService duelRoundService;
     private final SimpMessagingTemplate ws;
 
     public RoomController(RoomRepository roomRepo, RoomParticipantRepository participantRepo,
                            RoomProblemRepository roomProblemRepo, ProblemRepository problemRepo,
-                           SubmissionRepository submissionRepo, DuelRoundService duelRoundService,
-                           SimpMessagingTemplate ws) {
+                           SqlProblemBank sqlProblemBank, SubmissionRepository submissionRepo,
+                           DuelRoundService duelRoundService, SimpMessagingTemplate ws) {
         this.roomRepo = roomRepo; this.participantRepo = participantRepo;
-        this.roomProblemRepo = roomProblemRepo; this.problemRepo = problemRepo;
+        this.roomProblemRepo = roomProblemRepo; this.problemRepo = problemRepo; this.sqlProblemBank = sqlProblemBank;
         this.submissionRepo = submissionRepo; this.duelRoundService = duelRoundService; this.ws = ws;
     }
 
@@ -84,12 +87,26 @@ public class RoomController {
     @GetMapping("/{id}/problems")
     @Transactional(readOnly = true)
     public List<Map<String, Object>> roomProblems(@PathVariable UUID id) {
-        return roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).stream()
-                .map(rp -> Map.<String, Object>of(
-                        "problemId", rp.getProblem().getId(), "slug", rp.getProblem().getSlug(),
-                        "title", rp.getProblem().getTitle(), "difficulty", rp.getProblem().getDifficulty(),
-                        "points", rp.getPoints(), "sortOrder", rp.getSortOrder()))
-                .toList();
+        return roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).stream().map(this::roomProblemEntry).toList();
+    }
+
+    private String submissionKey(Submission s) {
+        return s.getProblem() != null ? "java:" + s.getProblem().getId() : "sql:" + s.getSqlSlug();
+    }
+
+    private Map<String, Object> roomProblemEntry(RoomProblem rp) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (rp.isSql()) {
+            SqlProblem p = sqlProblemBank.findBySlug(rp.getSqlSlug()).orElse(null);
+            m.put("type", "sql"); m.put("slug", rp.getSqlSlug());
+            m.put("title", p != null ? p.title() : rp.getSqlSlug());
+            m.put("difficulty", p != null ? p.difficulty() : "medium");
+        } else {
+            m.put("type", "java"); m.put("problemId", rp.getProblem().getId()); m.put("slug", rp.getProblem().getSlug());
+            m.put("title", rp.getProblem().getTitle()); m.put("difficulty", rp.getProblem().getDifficulty());
+        }
+        m.put("points", rp.getPoints()); m.put("sortOrder", rp.getSortOrder());
+        return m;
     }
 
     @GetMapping("/{id}/state")
@@ -99,20 +116,15 @@ public class RoomController {
             List<Submission> accepted = submissionRepo.findByRoomId(id).stream()
                     .filter(s -> "accepted".equals(s.getVerdict())).toList();
 
-            Map<UUID, List<String>> solvedByProblem = new HashMap<>();
+            Map<String, List<String>> solvedByProblem = new HashMap<>();
             for (Submission s : accepted) {
-                solvedByProblem.computeIfAbsent(s.getProblem().getId(), k -> new ArrayList<>()).add(s.getUser().getUsername());
+                solvedByProblem.computeIfAbsent(submissionKey(s), k -> new ArrayList<>()).add(s.getUser().getUsername());
             }
 
             List<Map<String, Object>> problems = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).stream().map(rp -> {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("problemId", rp.getProblem().getId());
-                m.put("slug", rp.getProblem().getSlug());
-                m.put("title", rp.getProblem().getTitle());
-                m.put("difficulty", rp.getProblem().getDifficulty());
-                m.put("points", rp.getPoints());
-                m.put("sortOrder", rp.getSortOrder());
-                m.put("solvedBy", solvedByProblem.getOrDefault(rp.getProblem().getId(), List.of()));
+                Map<String, Object> m = roomProblemEntry(rp);
+                String key = rp.isSql() ? "sql:" + rp.getSqlSlug() : "java:" + rp.getProblem().getId();
+                m.put("solvedBy", solvedByProblem.getOrDefault(key, List.of()));
                 return m;
             }).toList();
 
@@ -129,7 +141,7 @@ public class RoomController {
             me.put("username", user.getUsername());
             me.put("score", mine != null ? mine.getScore() : 0);
             me.put("solved", accepted.stream().filter(s -> s.getUser().getId().equals(user.getId()))
-                    .map(s -> s.getProblem().getSlug()).distinct().toList());
+                    .map(s -> s.getProblem() != null ? s.getProblem().getSlug() : s.getSqlSlug()).distinct().toList());
 
             Map<String, Object> roomInfo = new LinkedHashMap<>();
             roomInfo.put("id", room.getId());
@@ -143,7 +155,10 @@ public class RoomController {
             roomInfo.put("problemCount", room.getProblemCount());
             roomInfo.put("isDuel", room.getProblemCount() == 1);
             roomInfo.put("roundsPlayed", room.getRoundsPlayed());
-            roomInfo.put("currentProblemSlug", room.getCurrentProblem() != null ? room.getCurrentProblem().getSlug() : null);
+            boolean currentIsSql = room.getCurrentSqlSlug() != null;
+            roomInfo.put("currentProblemType", currentIsSql ? "sql" : "java");
+            roomInfo.put("currentProblemSlug", currentIsSql ? room.getCurrentSqlSlug()
+                    : (room.getCurrentProblem() != null ? room.getCurrentProblem().getSlug() : null));
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("room", roomInfo);
@@ -222,36 +237,30 @@ public class RoomController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    /** Mixes Java and SQL problems — BUILD-SPEC's north star: "rounds 1,3 Java / 2,5 SQL", never single-track.
+     * Alternates by slot parity; falls back to whichever pool still has problems if one runs short. */
     private void autoAssignProblems(Room room) {
         int count = room.getProblemCount();
-        int easyTarget = Math.round(count * 0.4f);
-        int mediumTarget = Math.round(count * 0.4f);
-        int hardTarget = count - easyTarget - mediumTarget;
+        List<Problem> javaPool = new ArrayList<>(problemRepo.findByIsActiveTrue());
+        Collections.shuffle(javaPool);
+        List<SqlProblem> sqlPool = new ArrayList<>(sqlProblemBank.findAll());
+        Collections.shuffle(sqlPool);
 
-        List<Problem> easy = new ArrayList<>(problemRepo.findByDifficultyAndIsActiveTrue("easy"));
-        List<Problem> medium = new ArrayList<>(problemRepo.findByDifficultyAndIsActiveTrue("medium"));
-        List<Problem> hard = new ArrayList<>(problemRepo.findByDifficultyAndIsActiveTrue("hard"));
-        Collections.shuffle(easy); Collections.shuffle(medium); Collections.shuffle(hard);
-
-        List<Problem> selected = new ArrayList<>();
-        selected.addAll(easy.subList(0, Math.min(easyTarget, easy.size())));
-        selected.addAll(medium.subList(0, Math.min(mediumTarget, medium.size())));
-        selected.addAll(hard.subList(0, Math.min(hardTarget, hard.size())));
-
-        if (selected.size() < count) {
-            List<Problem> leftover = new ArrayList<>(problemRepo.findByIsActiveTrue());
-            leftover.removeAll(selected);
-            Collections.shuffle(leftover);
-            for (Problem p : leftover) {
-                if (selected.size() >= count) break;
-                selected.add(p);
-            }
-        }
-        Collections.shuffle(selected);
-
-        for (int i = 0; i < selected.size(); i++) {
+        int javaIdx = 0, sqlIdx = 0, sortOrder = 0;
+        for (int i = 0; i < count; i++) {
+            boolean wantSql = i % 2 == 1;
             RoomProblem rp = new RoomProblem();
-            rp.setRoom(room); rp.setProblem(selected.get(i)); rp.setPoints(100); rp.setSortOrder(i);
+            rp.setRoom(room); rp.setPoints(100);
+            if (wantSql && sqlIdx < sqlPool.size()) {
+                rp.setSqlSlug(sqlPool.get(sqlIdx++).slug());
+            } else if (javaIdx < javaPool.size()) {
+                rp.setProblem(javaPool.get(javaIdx++));
+            } else if (sqlIdx < sqlPool.size()) {
+                rp.setSqlSlug(sqlPool.get(sqlIdx++).slug());
+            } else {
+                continue;
+            }
+            rp.setSortOrder(sortOrder++);
             roomProblemRepo.save(rp);
         }
     }

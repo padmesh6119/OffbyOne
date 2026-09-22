@@ -6,10 +6,15 @@ import { api, errorMessage } from '../lib/api';
 import { subscribe } from '../lib/ws';
 import { STARTERS } from '../lib/starters';
 import JudgeFeedback from '../components/JudgeFeedback';
+import SqlVerdict from '../components/SqlVerdict';
+import SqlResultTable from '../components/SqlResultTable';
 
 export default function DuelScreen({ roomId, room, leaderboard, me, username, onLeave }) {
+  const isSql = room.currentProblemType === 'sql';
+
   const [problem, setProblem] = useState(null);
   const [samples, setSamples] = useState([]);
+  const [sqlProblem, setSqlProblem] = useState(null);
   const [lang, setLang] = useState('java');
   const [code, setCode] = useState(STARTERS.java);
   const [submitting, setSubmitting] = useState(false);
@@ -31,12 +36,18 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
   const myScore = me?.score ?? 0;
   const opponentScore = opponent?.score ?? 0;
 
-  // fetch the current round's problem + samples whenever it changes
+  // fetch the current round's problem whenever it (or its type) changes
   useEffect(() => {
     if (!room.currentProblemSlug) return;
-    api.problem(room.currentProblemSlug).then(setProblem).catch(() => {});
-    api.samples(room.currentProblemSlug).then(setSamples).catch(() => {});
-    setCode(STARTERS[lang]);
+    setProblem(null); setSamples([]); setSqlProblem(null);
+    if (isSql) {
+      api.sqlProblem(room.currentProblemSlug).then(setSqlProblem).catch(() => {});
+      setCode('');
+    } else {
+      api.problem(room.currentProblemSlug).then(setProblem).catch(() => {});
+      api.samples(room.currentProblemSlug).then(setSamples).catch(() => {});
+      setCode(STARTERS[lang]);
+    }
     setVerdict(null);
     setError('');
     setResultPulse(null);
@@ -48,7 +59,7 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
       return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [room.currentProblemSlug]);
+  }, [room.currentProblemSlug, isSql]);
 
   // round_won interlude — own subscription, independent of parent's lobby subscription
   useEffect(() => {
@@ -89,8 +100,11 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
     setProgress(null);
     setError('');
     try {
-      const { submissionId } = await api.submit({ slug: room.currentProblemSlug, roomId, language: lang, code });
-      const progressSub = subscribe(`/topic/submission/${submissionId}/progress`, (data) => setProgress(data));
+      const body = isSql
+        ? { slug: room.currentProblemSlug, roomId, language: 'sql', code }
+        : { slug: room.currentProblemSlug, roomId, language: lang, code };
+      const { submissionId } = await api.submit(body);
+      const progressSub = isSql ? null : subscribe(`/topic/submission/${submissionId}/progress`, (data) => setProgress(data));
       const sub = subscribe(`/topic/submission/${submissionId}`, (data) => {
         setVerdict(data);
         setSubmitting(false);
@@ -112,6 +126,8 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
       setSubmitting(false);
     }
   }
+
+  const problemReady = isSql ? sqlProblem : problem;
 
   return (
     <div className="duel-screen">
@@ -143,7 +159,7 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
         </div>
         <div className="duel-vs-center">
           <span className="duel-vs-text">VS</span>
-          <span className="round-counter">Round {room.roundsPlayed}</span>
+          <span className="round-counter">Round {room.roundsPlayed}{isSql ? ' · SQL' : ' · Java'}</span>
         </div>
         <div className="duel-player duel-player-right">
           <motion.span key={opponentScore} className="duel-score-circle" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
@@ -160,7 +176,9 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
       <div className={`duel-body ${resultPulse ? `flash-${resultPulse}` : ''} ${shaking ? 'shake' : ''}`}>
         <motion.div className="duel-problem-panel" key={room.currentProblemSlug}
           initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.4 }}>
-          {problem ? (
+          {!problemReady && <p className="hint">Loading problem...</p>}
+
+          {!isSql && problem && (
             <>
               <h2>{problem.title}</h2>
               <span className={`diff-${problem.difficulty}`}>{problem.difficulty}</span>
@@ -174,24 +192,44 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
                 </div>
               ))}
             </>
-          ) : <p className="hint">Loading problem...</p>}
+          )}
+
+          {isSql && sqlProblem && (
+            <>
+              <h2>{sqlProblem.title}</h2>
+              <span className={`diff-${sqlProblem.difficulty}`}>{sqlProblem.difficulty}</span>
+              <div className="statement">
+                {sqlProblem.task.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+              </div>
+              {(sqlProblem.tables || []).map((t) => (
+                <div key={t.name} className="sql-schema-table">
+                  <h4>📋 {t.name}</h4>
+                  <SqlResultTable columns={t.columns} rows={t.rows} />
+                </div>
+              ))}
+            </>
+          )}
         </motion.div>
 
         <div className="duel-editor-panel">
-          <div className="lang-pills">
-            {['java', 'python', 'cpp'].map((l) => (
-              <button key={l} className={`lang-pill ${lang === l ? 'active' : ''}`}
-                onClick={() => { setLang(l); setCode(STARTERS[l]); }}>
-                {l === 'cpp' ? 'C++' : l[0].toUpperCase() + l.slice(1)}
-              </button>
-            ))}
-          </div>
-          <Editor height="45vh" language={lang === 'cpp' ? 'cpp' : lang} value={code} onChange={setCode} theme="vs-dark" />
-          <button className="duel-submit-btn" onClick={submit} disabled={submitting || !problem}>
+          {!isSql && (
+            <div className="lang-pills">
+              {['java', 'python', 'cpp'].map((l) => (
+                <button key={l} className={`lang-pill ${lang === l ? 'active' : ''}`}
+                  onClick={() => { setLang(l); setCode(STARTERS[l]); }}>
+                  {l === 'cpp' ? 'C++' : l[0].toUpperCase() + l.slice(1)}
+                </button>
+              ))}
+            </div>
+          )}
+          <Editor height="45vh" language={isSql ? 'sql' : (lang === 'cpp' ? 'cpp' : lang)} value={code} onChange={setCode} theme="vs-dark" />
+          <button className="duel-submit-btn" onClick={submit} disabled={submitting || !problemReady}>
             {submitting ? 'Judging...' : 'Submit'}
           </button>
 
-          <JudgeFeedback submitting={submitting} progress={progress} verdict={verdict} />
+          {isSql
+            ? <SqlVerdict submitting={submitting} verdict={verdict} />
+            : <JudgeFeedback submitting={submitting} progress={progress} verdict={verdict} />}
           {error && <p className="error">{error}</p>}
         </div>
       </div>

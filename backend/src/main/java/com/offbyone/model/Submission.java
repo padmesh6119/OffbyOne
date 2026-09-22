@@ -10,6 +10,7 @@ public class Submission {
     @Id @GeneratedValue private UUID id;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "user_id") private User user;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "problem_id") private Problem problem;
+    @Column(name = "sql_slug") private String sqlSlug;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "room_id") private Room room;
     @Column(nullable = false) private String language;
     @Column(nullable = false, columnDefinition = "TEXT") private String code;
@@ -23,6 +24,8 @@ public class Submission {
     public void setUser(User v) { this.user = v; }
     public Problem getProblem() { return problem; }
     public void setProblem(Problem v) { this.problem = v; }
+    public String getSqlSlug() { return sqlSlug; }
+    public void setSqlSlug(String v) { this.sqlSlug = v; }
     public Room getRoom() { return room; }
     public void setRoom(Room v) { this.room = v; }
     public String getLanguage() { return language; }

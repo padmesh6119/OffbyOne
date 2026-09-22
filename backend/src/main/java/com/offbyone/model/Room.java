@@ -19,6 +19,7 @@ public class Room {
     @Column(name = "duration_minutes") private int durationMinutes = 30;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_problem_id") private Problem currentProblem;
+    @Column(name = "current_sql_slug") private String currentSqlSlug;
     @Column(name = "rounds_played") private int roundsPlayed = 0;
     @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -42,6 +43,8 @@ public class Room {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public Problem getCurrentProblem() { return currentProblem; }
     public void setCurrentProblem(Problem v) { this.currentProblem = v; }
+    public String getCurrentSqlSlug() { return currentSqlSlug; }
+    public void setCurrentSqlSlug(String v) { this.currentSqlSlug = v; }
     public int getRoundsPlayed() { return roundsPlayed; }
     public void setRoundsPlayed(int v) { this.roundsPlayed = v; }
 }

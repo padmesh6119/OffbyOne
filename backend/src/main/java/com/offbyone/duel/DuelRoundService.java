@@ -6,6 +6,8 @@ import com.offbyone.model.RoomProblem;
 import com.offbyone.repository.ProblemRepository;
 import com.offbyone.repository.RoomProblemRepository;
 import com.offbyone.repository.RoomRepository;
+import com.offbyone.sql.SqlProblem;
+import com.offbyone.sql.SqlProblemBank;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,48 +18,75 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-/** Picks and broadcasts the next round's problem for 1v1 duel-mode rooms (problemCount == 1). */
+/** Picks and broadcasts the next round's problem for 1v1 duel-mode rooms (problemCount == 1).
+ * Rounds mix Java and SQL problems — see UI-SPEC.md §2 (language picked per duel is a display
+ * choice only; the pool here always mixes both, matching BUILD-SPEC's "never single-track" north star). */
 @Service
 public class DuelRoundService {
     private final RoomRepository roomRepo;
     private final RoomProblemRepository roomProblemRepo;
     private final ProblemRepository problemRepo;
+    private final SqlProblemBank sqlProblemBank;
     private final SimpMessagingTemplate ws;
 
     public DuelRoundService(RoomRepository roomRepo, RoomProblemRepository roomProblemRepo,
-                             ProblemRepository problemRepo, SimpMessagingTemplate ws) {
+                             ProblemRepository problemRepo, SqlProblemBank sqlProblemBank, SimpMessagingTemplate ws) {
         this.roomRepo = roomRepo; this.roomProblemRepo = roomProblemRepo;
-        this.problemRepo = problemRepo; this.ws = ws;
+        this.problemRepo = problemRepo; this.sqlProblemBank = sqlProblemBank; this.ws = ws;
     }
+
+    private record Candidate(boolean sql, Problem javaProblem, SqlProblem sqlProblem) {}
 
     @Transactional
     public void advanceRound(UUID roomId) {
         Room room = roomRepo.findById(roomId).orElseThrow();
 
         List<RoomProblem> history = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(roomId);
-        List<UUID> used = history.stream().map(rp -> rp.getProblem().getId()).toList();
+        List<UUID> usedJava = history.stream().filter(rp -> !rp.isSql()).map(rp -> rp.getProblem().getId()).toList();
+        List<String> usedSql = history.stream().filter(RoomProblem::isSql).map(RoomProblem::getSqlSlug).toList();
 
-        List<Problem> pool = new ArrayList<>(problemRepo.findByIsActiveTrue());
-        pool.removeIf(p -> used.contains(p.getId()));
-        // Bank exhausted — recycle the full pool rather than stall the duel.
-        if (pool.isEmpty()) pool = new ArrayList<>(problemRepo.findByIsActiveTrue());
+        List<Candidate> pool = buildPool(usedJava, usedSql);
+        // Bank exhausted — recycle the full combined pool rather than stall the duel.
+        if (pool.isEmpty()) pool = buildPool(List.of(), List.of());
         if (pool.isEmpty()) return;
         Collections.shuffle(pool);
-        Problem next = pool.get(0);
+        Candidate next = pool.get(0);
 
         RoomProblem rp = new RoomProblem();
-        rp.setRoom(room); rp.setProblem(next); rp.setPoints(1); rp.setSortOrder(room.getRoundsPlayed());
+        rp.setRoom(room); rp.setPoints(1); rp.setSortOrder(room.getRoundsPlayed());
+
+        Map<String, Object> problemPayload;
+        if (next.sql()) {
+            SqlProblem p = next.sqlProblem();
+            rp.setSqlSlug(p.slug());
+            room.setCurrentProblem(null);
+            room.setCurrentSqlSlug(p.slug());
+            problemPayload = Map.of("type", "sql", "slug", p.slug(), "title", p.title(), "difficulty", p.difficulty());
+        } else {
+            Problem p = next.javaProblem();
+            rp.setProblem(p);
+            room.setCurrentProblem(p);
+            room.setCurrentSqlSlug(null);
+            problemPayload = Map.of("type", "java", "id", p.getId(), "slug", p.getSlug(),
+                    "title", p.getTitle(), "difficulty", p.getDifficulty());
+        }
         roomProblemRepo.save(rp);
 
-        room.setCurrentProblem(next);
         room.setRoundsPlayed(room.getRoundsPlayed() + 1);
         roomRepo.save(room);
 
         ws.convertAndSend("/topic/room/" + roomId + "/lobby", Map.of(
-            "event", "round_start",
-            "round", room.getRoundsPlayed(),
-            "problem", Map.of("id", next.getId(), "slug", next.getSlug(),
-                    "title", next.getTitle(), "difficulty", next.getDifficulty())
-        ));
+            "event", "round_start", "round", room.getRoundsPlayed(), "problem", problemPayload));
+    }
+
+    private List<Candidate> buildPool(List<UUID> usedJava, List<String> usedSql) {
+        List<Candidate> pool = new ArrayList<>();
+        for (Problem p : problemRepo.findByIsActiveTrue()) {
+            if (!usedJava.contains(p.getId())) pool.add(new Candidate(false, p, null));
+        }
+        for (SqlProblem p : sqlProblemBank.findAll()) {
+            if (!usedSql.contains(p.slug())) pool.add(new Candidate(true, null, p));
+        }
+        return pool;
     }
 }

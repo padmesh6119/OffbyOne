@@ -42,6 +42,7 @@ CREATE TABLE rooms (
   problem_count INTEGER NOT NULL DEFAULT 5,
   duration_minutes INTEGER NOT NULL DEFAULT 30,
   current_problem_id UUID REFERENCES problems(id),
+  current_sql_slug VARCHAR(100),
   rounds_played INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
@@ -58,17 +59,19 @@ CREATE TABLE room_participants (
 );
 
 CREATE TABLE room_problems (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   room_id UUID NOT NULL REFERENCES rooms(id),
-  problem_id UUID NOT NULL REFERENCES problems(id),
+  problem_id UUID REFERENCES problems(id),
+  sql_slug VARCHAR(100),
   points INTEGER NOT NULL DEFAULT 100,
-  sort_order INTEGER NOT NULL DEFAULT 0,
-  PRIMARY KEY (room_id, problem_id)
+  sort_order INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE submissions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES users(id),
   problem_id UUID REFERENCES problems(id),
+  sql_slug VARCHAR(100),
   room_id UUID REFERENCES rooms(id),
   language TEXT NOT NULL,
   code TEXT NOT NULL,

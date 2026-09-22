@@ -3,6 +3,8 @@ package com.offbyone.controller;
 import com.offbyone.judge.JudgeService;
 import com.offbyone.model.*;
 import com.offbyone.repository.*;
+import com.offbyone.sql.SqlProblem;
+import com.offbyone.sql.SqlProblemBank;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -25,14 +27,15 @@ public class SubmissionController {
 
     private final SubmissionRepository submissionRepo;
     private final ProblemRepository problemRepo;
+    private final SqlProblemBank sqlProblemBank;
     private final RoomRepository roomRepo;
     private final RoomProblemRepository roomProblemRepo;
     private final JudgeService judgeService;
     private final StringRedisTemplate redis;
 
-    public SubmissionController(SubmissionRepository s, ProblemRepository p, RoomRepository r,
+    public SubmissionController(SubmissionRepository s, ProblemRepository p, SqlProblemBank sqlProblemBank, RoomRepository r,
                                  RoomProblemRepository rp, JudgeService j, StringRedisTemplate redis) {
-        this.submissionRepo = s; this.problemRepo = p; this.roomRepo = r;
+        this.submissionRepo = s; this.problemRepo = p; this.sqlProblemBank = sqlProblemBank; this.roomRepo = r;
         this.roomProblemRepo = rp; this.judgeService = j; this.redis = redis;
     }
 
@@ -40,18 +43,30 @@ public class SubmissionController {
     public ResponseEntity<?> submit(@RequestBody Map<String, String> body, @AuthenticationPrincipal User user) {
         if (rateLimited(user)) return ResponseEntity.status(429).body("Too many submissions, slow down");
 
-        Problem problem = problemRepo.findBySlug(body.get("slug")).orElse(null);
-        if (problem == null) return ResponseEntity.badRequest().body("Problem not found");
-
+        boolean isSql = "sql".equals(body.get("language"));
         Room room = null;
         if (body.containsKey("roomId")) {
             room = roomRepo.findById(UUID.fromString(body.get("roomId"))).orElse(null);
-            if (room != null) {
-                List<RoomProblem> assigned = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(room.getId());
-                boolean inScope = assigned.isEmpty() || assigned.stream().anyMatch(rp -> rp.getProblem().getId().equals(problem.getId()));
-                if (!inScope) return ResponseEntity.badRequest().body("Problem not assigned to this room");
-            }
         }
+
+        if (isSql) {
+            SqlProblem sqlProblem = sqlProblemBank.findBySlug(body.get("slug")).orElse(null);
+            if (sqlProblem == null) return ResponseEntity.badRequest().body("Problem not found");
+            if (room != null && !inScope(room.getId(), null, sqlProblem.slug()))
+                return ResponseEntity.badRequest().body("Problem not assigned to this room");
+
+            Submission sub = new Submission();
+            sub.setUser(user); sub.setSqlSlug(sqlProblem.slug()); sub.setRoom(room);
+            sub.setLanguage("sql"); sub.setCode(body.get("code"));
+            sub = submissionRepo.save(sub);
+            judgeService.judgeSql(sub, sqlProblem);
+            return ResponseEntity.ok(Map.of("submissionId", sub.getId(), "status", "queued"));
+        }
+
+        Problem problem = problemRepo.findBySlug(body.get("slug")).orElse(null);
+        if (problem == null) return ResponseEntity.badRequest().body("Problem not found");
+        if (room != null && !inScope(room.getId(), problem.getId(), null))
+            return ResponseEntity.badRequest().body("Problem not assigned to this room");
 
         Submission sub = new Submission();
         sub.setUser(user); sub.setProblem(problem); sub.setRoom(room);
@@ -59,6 +74,14 @@ public class SubmissionController {
         sub = submissionRepo.save(sub);
         judgeService.judge(sub);
         return ResponseEntity.ok(Map.of("submissionId", sub.getId(), "status", "queued"));
+    }
+
+    private boolean inScope(UUID roomId, UUID problemId, String sqlSlug) {
+        List<RoomProblem> assigned = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(roomId);
+        if (assigned.isEmpty()) return true;
+        return assigned.stream().anyMatch(rp -> sqlSlug != null
+                ? sqlSlug.equals(rp.getSqlSlug())
+                : rp.getProblem() != null && rp.getProblem().getId().equals(problemId));
     }
 
     @GetMapping("/{id}")
@@ -76,8 +99,8 @@ public class SubmissionController {
     private Map<String, Object> toDto(Submission s) {
         Map<String, Object> dto = new java.util.HashMap<>();
         dto.put("id", s.getId());
-        dto.put("problemSlug", s.getProblem().getSlug());
-        dto.put("problemTitle", s.getProblem().getTitle());
+        dto.put("problemSlug", s.getProblem() != null ? s.getProblem().getSlug() : s.getSqlSlug());
+        dto.put("problemTitle", s.getProblem() != null ? s.getProblem().getTitle() : s.getSqlSlug());
         dto.put("language", s.getLanguage());
         dto.put("verdict", s.getVerdict());
         dto.put("runtimeMs", s.getRuntimeMs());

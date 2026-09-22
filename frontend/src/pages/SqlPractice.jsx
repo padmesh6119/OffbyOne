@@ -2,21 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
 import { api } from '../lib/api';
-
-function ResultTable({ columns, rows }) {
-  return (
-    <table className="sql-result-table">
-      <thead><tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-      <tbody>
-        {rows.length === 0
-          ? <tr><td colSpan={columns.length} className="hint">(no rows)</td></tr>
-          : rows.map((row, i) => (
-              <tr key={i}>{row.map((v, j) => <td key={j}>{v === null ? <em className="hint">null</em> : String(v)}</td>)}</tr>
-            ))}
-      </tbody>
-    </table>
-  );
-}
+import ResultTable from '../components/SqlResultTable';
 
 export default function SqlPractice() {
   const [problems, setProblems] = useState([]);
