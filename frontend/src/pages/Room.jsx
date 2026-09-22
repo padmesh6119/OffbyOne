@@ -99,7 +99,7 @@ export default function Room() {
     setError('');
     setSubmittingHome(true);
     try {
-      const body = { name: roomName };
+      const body = { name: roomName, track: homeLanguage };
       if (homeMode === 'duel') body.mode = 'duel';
       else body.problemCount = String(problemCount);
       const r = await api.createRoom(body);
@@ -186,12 +186,11 @@ export default function Room() {
       return (
         <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
           <button onClick={() => setHomeMode(null)} className="link-btn">← Back</button>
-          <h2>{homeMode === 'duel' ? '1v1 Duel' : 'Tournament'} — choose language</h2>
+          <h2>{homeMode === 'duel' ? '1v1 Duel' : 'Tournament'} — choose track</h2>
           <div className="language-toggle">
-            <button className="language-btn" onClick={() => setHomeLanguage('java')}>Java</button>
-            <button className="language-btn" disabled title="SQL duels aren't wired into rooms yet — coming soon">
-              SQL <span className="soon-badge">soon</span>
-            </button>
+            <button className="language-btn" onClick={() => setHomeLanguage('java')}>Coding</button>
+            <button className="language-btn" onClick={() => setHomeLanguage('mixed')}>Coding + SQL</button>
+            <button className="language-btn" onClick={() => setHomeLanguage('sql')}>SQL</button>
           </div>
         </motion.div>
       );
@@ -200,7 +199,7 @@ export default function Room() {
     return (
       <motion.div className="page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
         <button onClick={() => setHomeLanguage(null)} className="link-btn">← Back</button>
-        <h2>{homeMode === 'duel' ? '1v1 Duel' : 'Tournament'} — Java</h2>
+        <h2>{homeMode === 'duel' ? '1v1 Duel' : 'Tournament'} — {homeLanguage === 'mixed' ? 'Coding + SQL' : homeLanguage === 'sql' ? 'SQL' : 'Coding'}</h2>
         <p className="hint">
           {homeMode === 'duel'
             ? 'Exactly 2 players. Live leaderboard.'

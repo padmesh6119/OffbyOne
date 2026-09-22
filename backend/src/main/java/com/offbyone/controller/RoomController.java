@@ -38,6 +38,8 @@ public class RoomController {
     public ResponseEntity<Room> create(@RequestBody Map<String, String> body, @AuthenticationPrincipal User user) {
         Room room = new Room();
         room.setName(body.get("name")); room.setHost(user); room.setJoinCode(generateCode());
+        String track = body.get("track");
+        room.setTrack(List.of("java", "mixed", "sql").contains(track) ? track : "java");
         if ("duel".equals(body.get("mode"))) {
             room.setProblemCount(1);
         } else if (body.get("problemCount") != null) {
@@ -153,6 +155,7 @@ public class RoomController {
             roomInfo.put("durationMinutes", room.getDurationMinutes());
             roomInfo.put("hostUsername", room.getHost() != null ? room.getHost().getUsername() : null);
             roomInfo.put("problemCount", room.getProblemCount());
+            roomInfo.put("track", room.getTrack());
             roomInfo.put("isDuel", room.getProblemCount() == 1);
             roomInfo.put("roundsPlayed", room.getRoundsPlayed());
             boolean currentIsSql = room.getCurrentSqlSlug() != null;
@@ -237,22 +240,26 @@ public class RoomController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    /** Mixes Java and SQL problems — BUILD-SPEC's north star: "rounds 1,3 Java / 2,5 SQL", never single-track.
-     * Alternates by slot parity; falls back to whichever pool still has problems if one runs short. */
+    /** Track-aware: "java" stays Java-only, "sql" stays SQL-only, "mixed" alternates by slot parity
+     * (BUILD-SPEC's north star: "rounds 1,3 Java / 2,5 SQL"). Falls back to whichever pool still has
+     * problems if one runs short. */
     private void autoAssignProblems(Room room) {
         int count = room.getProblemCount();
-        List<Problem> javaPool = new ArrayList<>(problemRepo.findByIsActiveTrue());
+        String track = room.getTrack();
+        List<Problem> javaPool = "sql".equals(track) ? List.of() : new ArrayList<>(problemRepo.findByIsActiveTrue());
         Collections.shuffle(javaPool);
-        List<SqlProblem> sqlPool = new ArrayList<>(sqlProblemBank.findAll());
+        List<SqlProblem> sqlPool = "java".equals(track) ? List.of() : new ArrayList<>(sqlProblemBank.findAll());
         Collections.shuffle(sqlPool);
 
         int javaIdx = 0, sqlIdx = 0, sortOrder = 0;
         for (int i = 0; i < count; i++) {
-            boolean wantSql = i % 2 == 1;
+            boolean wantSql = "sql".equals(track) || (!"java".equals(track) && i % 2 == 1);
             RoomProblem rp = new RoomProblem();
             rp.setRoom(room); rp.setPoints(100);
             if (wantSql && sqlIdx < sqlPool.size()) {
                 rp.setSqlSlug(sqlPool.get(sqlIdx++).slug());
+            } else if (!wantSql && javaIdx < javaPool.size()) {
+                rp.setProblem(javaPool.get(javaIdx++));
             } else if (javaIdx < javaPool.size()) {
                 rp.setProblem(javaPool.get(javaIdx++));
             } else if (sqlIdx < sqlPool.size()) {

@@ -19,8 +19,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /** Picks and broadcasts the next round's problem for 1v1 duel-mode rooms (problemCount == 1).
- * Rounds mix Java and SQL problems — see UI-SPEC.md §2 (language picked per duel is a display
- * choice only; the pool here always mixes both, matching BUILD-SPEC's "never single-track" north star). */
+ * Pool composition follows Room.track: "java" stays Java-only, "sql" stays SQL-only, "mixed"
+ * draws from both (BUILD-SPEC's "never single-track" north star). */
 @Service
 public class DuelRoundService {
     private final RoomRepository roomRepo;
@@ -45,9 +45,10 @@ public class DuelRoundService {
         List<UUID> usedJava = history.stream().filter(rp -> !rp.isSql()).map(rp -> rp.getProblem().getId()).toList();
         List<String> usedSql = history.stream().filter(RoomProblem::isSql).map(RoomProblem::getSqlSlug).toList();
 
-        List<Candidate> pool = buildPool(usedJava, usedSql);
-        // Bank exhausted — recycle the full combined pool rather than stall the duel.
-        if (pool.isEmpty()) pool = buildPool(List.of(), List.of());
+        String track = room.getTrack();
+        List<Candidate> pool = buildPool(usedJava, usedSql, track);
+        // Bank exhausted — recycle the full pool for this track rather than stall the duel.
+        if (pool.isEmpty()) pool = buildPool(List.of(), List.of(), track);
         if (pool.isEmpty()) return;
         Collections.shuffle(pool);
         Candidate next = pool.get(0);
@@ -79,13 +80,17 @@ public class DuelRoundService {
             "event", "round_start", "round", room.getRoundsPlayed(), "problem", problemPayload));
     }
 
-    private List<Candidate> buildPool(List<UUID> usedJava, List<String> usedSql) {
+    private List<Candidate> buildPool(List<UUID> usedJava, List<String> usedSql, String track) {
         List<Candidate> pool = new ArrayList<>();
-        for (Problem p : problemRepo.findByIsActiveTrue()) {
-            if (!usedJava.contains(p.getId())) pool.add(new Candidate(false, p, null));
+        if (!"sql".equals(track)) {
+            for (Problem p : problemRepo.findByIsActiveTrue()) {
+                if (!usedJava.contains(p.getId())) pool.add(new Candidate(false, p, null));
+            }
         }
-        for (SqlProblem p : sqlProblemBank.findAll()) {
-            if (!usedSql.contains(p.slug())) pool.add(new Candidate(true, null, p));
+        if (!"java".equals(track)) {
+            for (SqlProblem p : sqlProblemBank.findAll()) {
+                if (!usedSql.contains(p.slug())) pool.add(new Candidate(true, null, p));
+            }
         }
         return pool;
     }

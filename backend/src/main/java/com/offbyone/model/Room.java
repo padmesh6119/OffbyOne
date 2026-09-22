@@ -16,6 +16,7 @@ public class Room {
     @Column(name = "start_time") private LocalDateTime startTime;
     @Column(name = "end_time") private LocalDateTime endTime;
     @Column(name = "problem_count") private int problemCount = 5;
+    @Column(nullable = false) private String track = "java"; // "java" | "mixed" | "sql"
     @Column(name = "duration_minutes") private int durationMinutes = 30;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "current_problem_id") private Problem currentProblem;
@@ -38,6 +39,8 @@ public class Room {
     public void setEndTime(LocalDateTime v) { this.endTime = v; }
     public int getProblemCount() { return problemCount; }
     public void setProblemCount(int v) { this.problemCount = v; }
+    public String getTrack() { return track; }
+    public void setTrack(String v) { this.track = v; }
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int v) { this.durationMinutes = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }

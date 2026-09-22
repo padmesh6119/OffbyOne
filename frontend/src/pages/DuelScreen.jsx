@@ -159,7 +159,7 @@ export default function DuelScreen({ roomId, room, leaderboard, me, username, on
         </div>
         <div className="duel-vs-center">
           <span className="duel-vs-text">VS</span>
-          <span className="round-counter">Round {room.roundsPlayed}{isSql ? ' · SQL' : ' · Java'}</span>
+          <span className="round-counter">Round {room.roundsPlayed}{isSql ? ' · SQL' : ' · Coding'}</span>
         </div>
         <div className="duel-player duel-player-right">
           <motion.span key={opponentScore} className="duel-score-circle" initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>

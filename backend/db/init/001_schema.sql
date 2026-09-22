@@ -40,6 +40,7 @@ CREATE TABLE rooms (
   start_time TIMESTAMP,
   end_time TIMESTAMP,
   problem_count INTEGER NOT NULL DEFAULT 5,
+  track VARCHAR(10) NOT NULL DEFAULT 'java',
   duration_minutes INTEGER NOT NULL DEFAULT 30,
   current_problem_id UUID REFERENCES problems(id),
   current_sql_slug VARCHAR(100),
