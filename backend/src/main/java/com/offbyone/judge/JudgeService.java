@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.nio.file.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -111,7 +112,60 @@ public class JudgeService {
         });
     }
 
+    private static final int STDOUT_CAP_BYTES = 2 * 1024 * 1024;
+    private volatile Boolean bwrapAvailable;
+
+    private boolean bwrapAvailable() {
+        if (bwrapAvailable == null) {
+            try {
+                Process p = new ProcessBuilder("sh", "-c", "command -v bwrap").start();
+                bwrapAvailable = p.waitFor(3, java.util.concurrent.TimeUnit.SECONDS) && p.exitValue() == 0;
+            } catch (Exception e) { bwrapAvailable = false; }
+        }
+        return bwrapAvailable;
+    }
+
+    /** Sandboxes a shell command: no network, no host env vars, read-only rootfs except the submission's own tmpDir, resource-limited. */
+    private List<String> sandboxed(Path tmpDir, String shellCmd, int memoryMb, String language) {
+        String javaHome = System.getProperty("java.home");
+        // ulimit -v (RLIMIT_AS) is incompatible with the JVM: it reserves far more virtual
+        // address space than it actually uses (compressed class space alone defaults to 1GB),
+        // so capping -v kills javac/java at startup regardless of memoryMb. Heap is capped via
+        // -Xmx instead for java; -v still applies for python/cpp, which don't have this issue.
+        String vlimit = "java".equals(language) ? "" : ("ulimit -v " + (memoryMb * 1024) + " 2>/dev/null; ");
+        String guarded = vlimit + "ulimit -u 32 2>/dev/null; ulimit -f 20480 2>/dev/null; " + shellCmd;
+        List<String> cmd = new ArrayList<>(List.of(
+            "bwrap",
+            "--ro-bind", "/usr", "/usr",
+            "--ro-bind", "/lib", "/lib",
+            "--ro-bind-try", "/lib64", "/lib64",
+            "--ro-bind-try", "/opt", "/opt",
+            "--ro-bind-try", "/etc", "/etc"));
+        if (javaHome != null && !javaHome.startsWith("/usr") && !javaHome.startsWith("/opt")) {
+            cmd.addAll(List.of("--ro-bind-try", javaHome, javaHome));
+        }
+        cmd.addAll(List.of(
+            // --tmpfs /tmp must precede the tmpDir bind below — bwrap applies mounts in
+            // argument order, and tmpDir lives under /tmp, so a later tmpfs would shadow it.
+            "--tmpfs", "/tmp",
+            "--bind", tmpDir.toString(), tmpDir.toString(),
+            "--proc", "/proc",
+            "--dev", "/dev",
+            "--unshare-net",
+            "--unshare-pid",
+            "--die-with-parent",
+            "--new-session",
+            "--clearenv",
+            "--setenv", "PATH", javaHome + "/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "--setenv", "JAVA_HOME", javaHome,
+            "--chdir", tmpDir.toString(),
+            "sh", "-c", guarded
+        ));
+        return cmd;
+    }
+
     private RunResult run(String code, String language, String input, int timeLimitMs, int memoryMb) {
+        if (!bwrapAvailable()) return new RunResult("re", "", 0, "judge sandbox unavailable");
         try {
             Path tmpDir = Files.createTempDirectory("judge-" + UUID.randomUUID());
             String filename = switch (language) {
@@ -124,21 +178,22 @@ public class JudgeService {
                 case "java" -> "javac Main.java"; case "cpp" -> "g++ -O2 -o main main.cpp"; default -> null;
             };
             if (compileCmd != null) {
-                Process compile = new ProcessBuilder("sh", "-c", compileCmd).directory(tmpDir.toFile()).redirectErrorStream(true).start();
-                ByteArrayOutputStream compileOut = new ByteArrayOutputStream();
+                Process compile = new ProcessBuilder(sandboxed(tmpDir, compileCmd, memoryMb, language)).redirectErrorStream(true).start();
+                BoundedOutputStream compileOut = new BoundedOutputStream(STDOUT_CAP_BYTES);
                 Thread compileDrain = new Thread(() -> { try { compile.getInputStream().transferTo(compileOut); } catch (IOException ignored) {} });
                 compileDrain.start();
-                compile.waitFor();
+                boolean compileFinished = compile.waitFor(10, java.util.concurrent.TimeUnit.SECONDS);
+                if (!compileFinished) { compile.destroyForcibly(); compileDrain.join(); cleanup(tmpDir); return new RunResult("ce", "", 0, "compile timed out"); }
                 compileDrain.join();
-                if (compile.exitValue() != 0) { cleanup(tmpDir); return new RunResult("ce", "", 0, compileOut.toString()); }
+                if (compile.exitValue() != 0) { cleanup(tmpDir); return new RunResult("ce", "", 0, compileOut.result()); }
             }
             String runCmd = switch (language) {
                 case "java" -> "java -Xmx" + memoryMb + "m Main"; case "cpp" -> "./main"; case "python" -> "python3 main.py";
                 default -> throw new IllegalArgumentException();
             };
             long start = System.currentTimeMillis();
-            Process run = new ProcessBuilder("sh", "-c", runCmd + " < input.txt").directory(tmpDir.toFile()).redirectErrorStream(true).start();
-            ByteArrayOutputStream stdoutBuf = new ByteArrayOutputStream();
+            Process run = new ProcessBuilder(sandboxed(tmpDir, runCmd + " < input.txt", memoryMb, language)).redirectErrorStream(true).start();
+            BoundedOutputStream stdoutBuf = new BoundedOutputStream(STDOUT_CAP_BYTES);
             Thread drain = new Thread(() -> { try { run.getInputStream().transferTo(stdoutBuf); } catch (IOException ignored) {} });
             drain.start();
             boolean finished = run.waitFor(timeLimitMs, java.util.concurrent.TimeUnit.MILLISECONDS);
@@ -146,7 +201,7 @@ public class JudgeService {
             if (!finished) { run.destroyForcibly(); drain.join(); cleanup(tmpDir); return new RunResult("tle", "", runtimeMs, ""); }
             drain.join();
             if (run.exitValue() != 0) { cleanup(tmpDir); return new RunResult("re", "", runtimeMs, ""); }
-            String stdout = stdoutBuf.toString();
+            String stdout = stdoutBuf.result();
             cleanup(tmpDir);
             return new RunResult("ok", stdout, runtimeMs, "");
         } catch (Exception e) { return new RunResult("re", "", 0, ""); }
@@ -158,6 +213,20 @@ public class JudgeService {
                 stream.sorted(java.util.Comparator.reverseOrder()).map(Path::toFile).forEach(File::delete);
             }
         } catch (IOException ignored) {}
+    }
+
+    /** Caps how much child stdout/stderr we hold in memory, while still draining the pipe so the child never blocks on a full buffer. */
+    private static class BoundedOutputStream extends OutputStream {
+        private final ByteArrayOutputStream buf = new ByteArrayOutputStream();
+        private final int cap;
+        BoundedOutputStream(int cap) { this.cap = cap; }
+        @Override public void write(int b) { if (buf.size() < cap) buf.write(b); }
+        @Override public void write(byte[] b, int off, int len) {
+            int remaining = cap - buf.size();
+            if (remaining <= 0) return;
+            buf.write(b, off, Math.min(len, remaining));
+        }
+        String result() { return buf.toString(); }
     }
 
     record RunResult(String verdict, String stdout, int runtimeMs, String message) {}
