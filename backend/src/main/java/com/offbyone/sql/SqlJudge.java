@@ -20,6 +20,43 @@ public class SqlJudge {
 
     public record Verdict(String status, String message) {}
 
+    /** Schema + ~5 sample rows per table, for the frontend's schema panel. Never exposes referenceQuery/expected. */
+    public List<Map<String, Object>> previewTables(SqlProblem problem) {
+        List<Map<String, Object>> tables = new ArrayList<>();
+        try (Connection con = DriverManager.getConnection("jdbc:sqlite::memory:")) {
+            try (Statement setup = con.createStatement()) {
+                for (String stmt : problem.schema()) setup.execute(stmt);
+                for (String stmt : problem.seedData()) setup.execute(stmt);
+            }
+            for (String createStmt : problem.schema()) {
+                String tableName = extractTableName(createStmt);
+                if (tableName == null) continue;
+                List<String> columns = new ArrayList<>();
+                List<List<Object>> rows = new ArrayList<>();
+                try (Statement st = con.createStatement();
+                     ResultSet rs = st.executeQuery("SELECT * FROM " + tableName + " LIMIT 5")) {
+                    int colCount = rs.getMetaData().getColumnCount();
+                    for (int i = 1; i <= colCount; i++) columns.add(rs.getMetaData().getColumnName(i));
+                    while (rs.next()) {
+                        List<Object> row = new ArrayList<>();
+                        for (int i = 1; i <= colCount; i++) row.add(rs.getObject(i));
+                        rows.add(row);
+                    }
+                }
+                tables.add(Map.of("name", tableName, "columns", columns, "rows", rows));
+            }
+        } catch (SQLException e) {
+            // problem schema is author-provided/trusted; on unexpected failure just return no preview
+        }
+        return tables;
+    }
+
+    private String extractTableName(String createStmt) {
+        var m = java.util.regex.Pattern.compile(
+                "(?i)CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?[\"'`]?(\\w+)[\"'`]?").matcher(createStmt);
+        return m.find() ? m.group(1) : null;
+    }
+
     public Verdict judge(SqlProblem problem, String playerQuery) {
         String trimmed = playerQuery == null ? "" : playerQuery.trim();
         if (trimmed.isEmpty()) return new Verdict("error", "Empty query");

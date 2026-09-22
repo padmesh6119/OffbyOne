@@ -60,36 +60,57 @@ public class JudgeService {
         String verdict = "accepted";
         int totalRuntime = 0;
         String message = "";
+        Map<String, Object> sampleFailed = null;
 
+        int testIndex = 0;
         for (TestCase tc : testCases) {
+            testIndex++;
             RunResult result = run(submission.getCode(), submission.getLanguage(), tc.getInput(), problem.getTimeLimitMs(), problem.getMemoryLimitMb());
             totalRuntime = Math.max(totalRuntime, result.runtimeMs());
             if (result.verdict().equals("ce")) { verdict = "ce"; message = result.message(); break; }
-            if (result.verdict().equals("tle")) { verdict = "tle"; break; }
+            if (result.verdict().equals("tle")) {
+                verdict = "tle";
+                message = "Exceeded " + problem.getTimeLimitMs() + "ms on test case " + testIndex;
+                break;
+            }
             if (result.verdict().equals("mle")) { verdict = "mle"; break; }
-            if (result.verdict().equals("re")) { verdict = "re"; break; }
-            if (!result.stdout().trim().equals(tc.getExpectedOutput().trim())) { verdict = "wrong_answer"; break; }
+            if (result.verdict().equals("re")) { verdict = "re"; message = result.message(); break; }
+            if (!result.stdout().trim().equals(tc.getExpectedOutput().trim())) {
+                verdict = "wrong_answer";
+                if (tc.isSample()) {
+                    sampleFailed = Map.of("input", tc.getInput(), "expected", tc.getExpectedOutput(), "got", result.stdout());
+                } else {
+                    message = "Test case " + testIndex + " of " + testCases.size() + " failed";
+                }
+                break;
+            }
         }
 
         submission.setVerdict(verdict); submission.setRuntimeMs(totalRuntime);
         submissionRepo.save(submission);
-        ws.convertAndSend("/topic/submission/" + submission.getId(),
-            Map.of("verdict", verdict, "runtimeMs", totalRuntime, "message", message));
+        Map<String, Object> verdictPayload = new java.util.LinkedHashMap<>();
+        verdictPayload.put("verdict", verdict); verdictPayload.put("runtimeMs", totalRuntime); verdictPayload.put("message", message);
+        if (sampleFailed != null) verdictPayload.put("sampleFailed", sampleFailed);
+        ws.convertAndSend("/topic/submission/" + submission.getId(), verdictPayload);
 
         if (submission.getRoom() != null) {
-            if ("accepted".equals(verdict)) awardPoints(submission);
+            boolean firstBlood = false;
+            if ("accepted".equals(verdict)) firstBlood = awardPoints(submission);
             else if ("wrong_answer".equals(verdict)) applyWrongAnswerPenalty(submission);
-            ws.convertAndSend("/topic/room/" + submission.getRoom().getId() + "/submission",
-                Map.of("submissionId", submission.getId(), "userId", submission.getUser().getId(),
-                       "problemId", submission.getProblem().getId(), "verdict", verdict));
+            Map<String, Object> roomPayload = new java.util.LinkedHashMap<>();
+            roomPayload.put("submissionId", submission.getId()); roomPayload.put("userId", submission.getUser().getId());
+            roomPayload.put("problemId", submission.getProblem().getId()); roomPayload.put("verdict", verdict);
+            if (firstBlood) roomPayload.put("firstBlood", true);
+            ws.convertAndSend("/topic/room/" + submission.getRoom().getId() + "/submission", roomPayload);
         }
     }
 
-    private void awardPoints(Submission submission) {
+    /** @return true if this submission was the first accepted solve for its problem in this room. */
+    private boolean awardPoints(Submission submission) {
         UUID roomId = submission.getRoom().getId(), problemId = submission.getProblem().getId(), userId = submission.getUser().getId();
         boolean alreadySolved = submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, problemId, userId).stream()
             .anyMatch(s -> "accepted".equals(s.getVerdict()) && !s.getId().equals(submission.getId()));
-        if (alreadySolved) return;
+        if (alreadySolved) return false;
 
         boolean firstBlood = submissionRepo.findByRoomIdAndProblemIdAndVerdict(roomId, problemId, "accepted").stream()
             .noneMatch(s -> !s.getId().equals(submission.getId()));
@@ -97,7 +118,7 @@ public class JudgeService {
         Room room = submission.getRoom();
         if (room.getProblemCount() == 1) {
             if (firstBlood) handleDuelRoundWin(submission, room);
-            return; // duel mode: only the round winner scores, no decay/bonus scoring below
+            return firstBlood; // duel mode: only the round winner scores, no decay/bonus scoring below
         }
 
         int basePoints = roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId).map(rp -> rp.getPoints()).orElse(100);
@@ -130,6 +151,7 @@ public class JudgeService {
         participant.setSolvedCount(participant.getSolvedCount() + 1);
         participant.setLastSolveAt(java.time.LocalDateTime.now());
         participantRepo.save(participant);
+        return firstBlood;
     }
 
     /** Duel mode: the round winner gets +1 score (rounds won), then the next round starts after a 5s pause. */

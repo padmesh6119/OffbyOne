@@ -32,7 +32,7 @@ public class SqlProblemController {
         return bank.findBySlug(slug)
                 .map(p -> ResponseEntity.ok(Map.of("slug", p.slug(), "title", p.title(),
                         "difficulty", p.difficulty(), "rating", p.rating(), "pattern", p.pattern(),
-                        "schema", p.schema(), "task", p.task())))
+                        "schema", p.schema(), "task", p.task(), "tables", judge.previewTables(p))))
                 .orElse(ResponseEntity.notFound().build());
     }
 

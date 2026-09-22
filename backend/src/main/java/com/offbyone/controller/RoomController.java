@@ -182,6 +182,35 @@ public class RoomController {
         }).orElse(ResponseEntity.notFound().build());
     }
 
+    /** Duel mode has no fixed end time — it ends when a player leaves (UI-SPEC.md §5). Tournament rooms just drop the participant and keep running. */
+    @PostMapping("/{id}/leave")
+    @Transactional
+    public ResponseEntity<?> leave(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        return roomRepo.findById(id).map(room -> {
+            if ("finished".equals(room.getStatus())) return ResponseEntity.ok(Map.of("status", "finished"));
+
+            boolean isDuel = room.getProblemCount() == 1;
+            if (isDuel && "active".equals(room.getStatus())) {
+                room.setStatus("finished");
+                roomRepo.save(room);
+                List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(id);
+                List<Map<String, Object>> standings = new ArrayList<>();
+                for (int i = 0; i < ranked.size(); i++) {
+                    RoomParticipant p = ranked.get(i);
+                    standings.add(Map.of("username", p.getUser().getUsername(), "score", p.getScore(),
+                            "solvedCount", p.getSolvedCount(), "rank", i + 1,
+                            "left", p.getUser().getId().equals(user.getId())));
+                }
+                ws.convertAndSend("/topic/room/" + id + "/finished", Map.of(
+                        "event", "finished", "reason", "opponent_left",
+                        "leftUsername", user.getUsername(), "standings", standings));
+            } else {
+                ws.convertAndSend("/topic/room/" + id + "/lobby", Map.of("event", "left", "username", user.getUsername()));
+            }
+            return ResponseEntity.ok(Map.of("status", room.getStatus()));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/{id}/next-problem")
     @Transactional
     public ResponseEntity<?> nextProblem(@PathVariable UUID id, @AuthenticationPrincipal User user) {

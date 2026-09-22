@@ -2,9 +2,11 @@ package com.offbyone.duel;
 
 import com.offbyone.model.Room;
 import com.offbyone.model.RoomParticipant;
+import com.offbyone.model.User;
 import com.offbyone.repository.RoomParticipantRepository;
 import com.offbyone.repository.RoomProblemRepository;
 import com.offbyone.repository.RoomRepository;
+import com.offbyone.repository.UserRepository;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -12,20 +14,25 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 public class DuelSweeper {
+    private static final int ELO_K = 32;
+
     private final RoomRepository roomRepo;
     private final RoomParticipantRepository participantRepo;
     private final RoomProblemRepository roomProblemRepo;
+    private final UserRepository userRepo;
     private final SimpMessagingTemplate ws;
 
     public DuelSweeper(RoomRepository roomRepo, RoomParticipantRepository participantRepo,
-                        RoomProblemRepository roomProblemRepo, SimpMessagingTemplate ws) {
+                        RoomProblemRepository roomProblemRepo, UserRepository userRepo, SimpMessagingTemplate ws) {
         this.roomRepo = roomRepo; this.participantRepo = participantRepo;
-        this.roomProblemRepo = roomProblemRepo; this.ws = ws;
+        this.roomProblemRepo = roomProblemRepo; this.userRepo = userRepo; this.ws = ws;
     }
 
     @Scheduled(fixedDelay = 15000)
@@ -48,14 +55,41 @@ public class DuelSweeper {
             room.setStatus("finished");
             roomRepo.save(room);
 
+            Map<UUID, Integer> ratingDeltas = applyElo(ranked);
+
             List<Map<String, Object>> standings = new ArrayList<>();
             for (int i = 0; i < ranked.size(); i++) {
                 RoomParticipant p = ranked.get(i);
                 standings.add(Map.of("username", p.getUser().getUsername(), "score", p.getScore(),
-                        "solvedCount", p.getSolvedCount(), "rank", i + 1));
+                        "solvedCount", p.getSolvedCount(), "rank", i + 1,
+                        "ratingDelta", ratingDeltas.getOrDefault(p.getUser().getId(), 0),
+                        "rating", p.getUser().getRating()));
             }
             ws.convertAndSend("/topic/room/" + room.getId() + "/finished",
                     Map.of("event", "finished", "standings", standings));
         }
+    }
+
+    /** Pairwise Elo (K=32): each participant plays every other as a virtual 1v1, decided by final score. */
+    private Map<UUID, Integer> applyElo(List<RoomParticipant> ranked) {
+        Map<UUID, Integer> deltas = new HashMap<>();
+        if (ranked.size() < 2) return deltas;
+
+        for (RoomParticipant a : ranked) {
+            double sum = 0;
+            for (RoomParticipant b : ranked) {
+                if (a == b) continue;
+                double expected = 1.0 / (1.0 + Math.pow(10, (b.getUser().getRating() - a.getUser().getRating()) / 400.0));
+                double actual = a.getScore() > b.getScore() ? 1.0 : a.getScore() < b.getScore() ? 0.0 : 0.5;
+                sum += ELO_K * (actual - expected);
+            }
+            deltas.put(a.getUser().getId(), (int) Math.round(sum / (ranked.size() - 1)));
+        }
+        for (RoomParticipant p : ranked) {
+            User u = p.getUser();
+            u.setRating(u.getRating() + deltas.get(u.getId()));
+            userRepo.save(u);
+        }
+        return deltas;
     }
 }
