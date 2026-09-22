@@ -143,6 +143,26 @@ public class JudgeService {
         return pb;
     }
 
+    /** Temporary diagnostic: runs the real fallback command for a trivial python script and reports raw output. */
+    public Map<String, Object> diagnoseFallback() {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        try {
+            Path tmpDir = Files.createTempDirectory("fallback-diag");
+            Files.writeString(tmpDir.resolve("main.py"), "print('hello')");
+            Files.writeString(tmpDir.resolve("input.txt"), "");
+            ProcessBuilder pb = guarded(tmpDir, "python3 main.py < input.txt", 256, "python");
+            result.put("env", pb.environment());
+            result.put("dir", pb.directory() == null ? null : pb.directory().toString());
+            Process p = pb.redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes());
+            boolean finished = p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            result.put("output", out.trim());
+            result.put("exit", finished ? String.valueOf(p.exitValue()) : "timeout");
+            cleanup(tmpDir);
+        } catch (Exception e) { result.put("error", e.toString()); }
+        return result;
+    }
+
     private RunResult run(String code, String language, String input, int timeLimitMs, int memoryMb) {
         try {
             Path tmpDir = Files.createTempDirectory("judge-" + UUID.randomUUID());
