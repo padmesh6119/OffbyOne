@@ -164,6 +164,31 @@ public class JudgeService {
         return cmd;
     }
 
+    /** Temporary diagnostic: runs the actual sandbox invocation and reports raw output, to debug why bwrap fails on a given host. */
+    public Map<String, Object> diagnoseSandbox() {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        try {
+            Process which = new ProcessBuilder("sh", "-c", "command -v bwrap; echo EXIT:$?").redirectErrorStream(true).start();
+            String whichOut = new String(which.getInputStream().readAllBytes());
+            which.waitFor();
+            result.put("which_bwrap", whichOut.trim());
+        } catch (Exception e) { result.put("which_bwrap_error", e.toString()); }
+
+        try {
+            Path tmp = Files.createTempDirectory("sandbox-diag");
+            List<String> cmd = sandboxed(tmp, "echo sandboxed-ok", 256, "python");
+            result.put("bwrap_cmd", cmd);
+            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            String out = new String(p.getInputStream().readAllBytes());
+            boolean finished = p.waitFor(5, java.util.concurrent.TimeUnit.SECONDS);
+            result.put("bwrap_test_output", out.trim());
+            result.put("bwrap_test_exit", finished ? String.valueOf(p.exitValue()) : "timeout");
+            cleanup(tmp);
+        } catch (Exception e) { result.put("bwrap_test_error", e.toString()); }
+
+        return result;
+    }
+
     private RunResult run(String code, String language, String input, int timeLimitMs, int memoryMb) {
         if (!bwrapAvailable()) return new RunResult("re", "", 0, "judge sandbox unavailable");
         try {
