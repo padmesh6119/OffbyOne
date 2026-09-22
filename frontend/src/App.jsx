@@ -3,6 +3,7 @@ import Join from './pages/Join';
 import Problems from './pages/Problems';
 import ProblemDetail from './pages/ProblemDetail';
 import Room from './pages/Room';
+import SqlPractice from './pages/SqlPractice';
 import './index.css';
 
 function Nav() {
@@ -10,8 +11,8 @@ function Nav() {
   return (
     <nav>
       <Link to="/">OffByOne</Link>
-      <Link to="/problems">Problems</Link>
-      <Link to="/room">Room</Link>
+      <Link to="/sql">SQL Duels</Link>
+      <Link to="/problems">Practice</Link>
       {username && <span className="nav-user">👤 {username}</span>}
       <button onClick={() => { localStorage.clear(); location.reload(); }}>Leave</button>
     </nav>
@@ -27,11 +28,11 @@ export default function App() {
     <BrowserRouter>
       <Nav />
       <Routes>
-        <Route path="/" element={<Navigate to="/problems" />} />
+        <Route path="/" element={<Guard><Room /></Guard>} />
         <Route path="/join" element={<Join />} />
+        <Route path="/sql" element={<Guard><SqlPractice /></Guard>} />
         <Route path="/problems" element={<Guard><Problems /></Guard>} />
         <Route path="/problem/:slug" element={<Guard><ProblemDetail /></Guard>} />
-        <Route path="/room" element={<Guard><Room /></Guard>} />
       </Routes>
     </BrowserRouter>
   );

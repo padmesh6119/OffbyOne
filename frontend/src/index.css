@@ -54,7 +54,7 @@ td a { color: #7c83fd; text-decoration: none; }
 .verdict-wrong_answer { background: #b71c1c; color: #ef9a9a; }
 .verdict-tle { background: #e65100; color: #ffcc80; }
 .verdict-mle { background: #4a148c; color: #ce93d8; }
-.verdict-re, .verdict-ce { background: #212121; color: #f48fb1; }
+.verdict-re, .verdict-ce, .verdict-error { background: #212121; color: #f48fb1; }
 
 .room-actions { display: flex; gap: 2rem; margin-top: 1rem; }
 .room-actions div { display: flex; flex-direction: column; gap: 0.5rem; }
@@ -77,3 +77,27 @@ select { padding: 0.5rem; background: #1a1a1a; color: #fff;
 .join-screen button { padding: 0.85rem; font-size: 1.1rem; background: #7c83fd;
   color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
 .nav-user { color: #aaa; font-size: 0.9rem; }
+
+.hint { color: #888; font-size: 0.9rem; margin-top: 0.5rem; }
+.join-code { font-size: 1.3rem; letter-spacing: 2px; color: #7c83fd; }
+.start-btn { padding: 0.85rem 2rem; background: #7c83fd; color: #fff; border: none;
+  border-radius: 6px; cursor: pointer; font-size: 1.05rem; font-weight: 600; margin-top: 1rem; }
+.start-btn:disabled { background: #444; cursor: not-allowed; }
+.link-btn { background: none; border: none; color: #888; text-decoration: underline;
+  cursor: pointer; margin-top: 1rem; padding: 0; }
+
+.duel-layout { display: grid; grid-template-columns: 1fr 300px; gap: 1rem;
+  height: calc(100vh - 60px); padding: 1rem; }
+.duel-main { display: flex; flex-direction: column; gap: 0.75rem; overflow: hidden; }
+.duel-tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.duel-tab { padding: 0.5rem 0.9rem; background: #1a1a1a; border: 1px solid #333;
+  color: #ccc; border-radius: 4px; cursor: pointer; font-size: 0.85rem; }
+.duel-tab.active { border-color: #7c83fd; color: #fff; }
+.duel-tab.solved { color: #4caf50; }
+.duel-sidebar { background: #1a1a1a; border: 1px solid #333; border-radius: 8px;
+  padding: 1rem; overflow-y: auto; }
+.countdown { font-size: 2rem; font-weight: bold; text-align: center; color: #7c83fd;
+  margin-bottom: 1rem; }
+.duel-sidebar tr.me td { color: #7c83fd; font-weight: 600; }
+
+tr.winner td { color: #ffd700; font-weight: 600; }

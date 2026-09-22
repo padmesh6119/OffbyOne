@@ -26,4 +26,13 @@ export const api = {
   joinRoom: (code) => req(`/api/rooms/${code}/join`, { method: 'POST' }),
   startRoom: (id) => req(`/api/rooms/${id}/start`, { method: 'POST' }),
   leaderboard: (id) => req(`/api/rooms/${id}/leaderboard`),
+  roomState: (id) => req(`/api/rooms/${id}/state`),
+  sqlProblems: () => req('/api/sql-problems'),
+  sqlProblem: (slug) => req(`/api/sql-problems/${slug}`),
+  sqlSubmit: (slug, query) => req(`/api/sql-problems/${slug}/submit`, { method: 'POST', body: JSON.stringify({ query }) }),
 };
+
+export function errorMessage(err) {
+  try { return JSON.parse(err.message).error || err.message; }
+  catch { return err.message; }
+}

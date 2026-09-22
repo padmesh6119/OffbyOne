@@ -130,6 +130,7 @@ public class RoomController {
             roomInfo.put("startTime", room.getStartTime());
             roomInfo.put("endTime", room.getEndTime());
             roomInfo.put("durationMinutes", room.getDurationMinutes());
+            roomInfo.put("hostUsername", room.getHost() != null ? room.getHost().getUsername() : null);
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("room", roomInfo);
