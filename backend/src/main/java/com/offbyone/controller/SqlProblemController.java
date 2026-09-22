@@ -40,7 +40,12 @@ public class SqlProblemController {
     public ResponseEntity<?> submit(@PathVariable String slug, @RequestBody Map<String, String> body) {
         return bank.findBySlug(slug).<ResponseEntity<?>>map(p -> {
             SqlJudge.Verdict v = judge.judge(p, body.get("query"));
-            return ResponseEntity.ok(Map.of("verdict", v.status(), "message", v.message()));
+            Map<String, Object> result = new java.util.LinkedHashMap<>();
+            result.put("verdict", v.status());
+            result.put("message", v.message());
+            if (v.actualColumns() != null) result.put("actual", Map.of("columns", v.actualColumns(), "rows", v.actualRows()));
+            if (v.expectedColumns() != null) result.put("expected", Map.of("columns", v.expectedColumns(), "rows", v.expectedRows()));
+            return ResponseEntity.ok(result);
         }).orElse(ResponseEntity.notFound().build());
     }
 }

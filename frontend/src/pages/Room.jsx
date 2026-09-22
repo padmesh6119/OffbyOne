@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { api, errorMessage } from '../lib/api';
 import { connect, subscribe, disconnect } from '../lib/ws';
 import { STARTERS } from '../lib/starters';
+import DuelScreen from './DuelScreen';
+import ResultsScreen from './ResultsScreen';
+import JudgeFeedback from '../components/JudgeFeedback';
 
 export default function Room() {
   const [roomId, setRoomId] = useState(null);
@@ -13,6 +16,8 @@ export default function Room() {
 
   const [homeMode, setHomeMode] = useState(null); // null | 'duel' | 'tournament'
   const [homeLanguage, setHomeLanguage] = useState(null); // null | 'java' | 'sql'
+  const [problemCount, setProblemCount] = useState(5);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [roomName, setRoomName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [submittingHome, setSubmittingHome] = useState(false);
@@ -22,7 +27,10 @@ export default function Room() {
   const [codeBySlug, setCodeBySlug] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [verdict, setVerdict] = useState(null);
+  const [progress, setProgress] = useState(null);
+  const [firstBlood, setFirstBlood] = useState(false);
   const [problemDetail, setProblemDetail] = useState(null);
+  const [samples, setSamples] = useState([]);
   const [secondsLeft, setSecondsLeft] = useState(0);
 
   const username = localStorage.getItem('username');
@@ -37,7 +45,13 @@ export default function Room() {
     refresh(roomId);
     connect(() => {
       subsRef.current.push(subscribe(`/topic/room/${roomId}/lobby`, () => refresh(roomId)));
-      subsRef.current.push(subscribe(`/topic/room/${roomId}/submission`, () => refresh(roomId)));
+      subsRef.current.push(subscribe(`/topic/room/${roomId}/submission`, (data) => {
+        if (data.firstBlood && data.username === username) {
+          setFirstBlood(true);
+          setTimeout(() => setFirstBlood(false), 3000);
+        }
+        refresh(roomId);
+      }));
       subsRef.current.push(subscribe(`/topic/room/${roomId}/finished`, (data) => {
         setFinalStandings(data.standings);
         refresh(roomId);
@@ -62,12 +76,14 @@ export default function Room() {
     return () => clearInterval(id);
   }, [state?.room?.endTime, state?.room?.status]);
 
-  // fetch problem statement when active tab changes
+  // fetch problem statement + samples when active tab changes
   const activeSlug = selectedSlug || state?.problems?.[0]?.slug || null;
   useEffect(() => {
     if (!activeSlug) return;
     setProblemDetail(null);
+    setSamples([]);
     api.problem(activeSlug).then(setProblemDetail).catch(() => {});
+    api.samples(activeSlug).then(setSamples).catch(() => {});
   }, [activeSlug]);
 
   async function createRoom() {
@@ -76,6 +92,7 @@ export default function Room() {
     try {
       const body = { name: roomName };
       if (homeMode === 'duel') body.mode = 'duel';
+      else body.problemCount = String(problemCount);
       const r = await api.createRoom(body);
       setRoomId(r.id);
     } catch (err) { setError(errorMessage(err)); }
@@ -104,13 +121,17 @@ export default function Room() {
     if (!activeSlug) return;
     setSubmitting(true);
     setVerdict(null);
+    setProgress(null);
     try {
       const code = codeBySlug[activeSlug] ?? STARTERS[lang];
       const { submissionId } = await api.submit({ slug: activeSlug, roomId, language: lang, code });
+      const progressSub = subscribe(`/topic/submission/${submissionId}/progress`, (data) => setProgress(data));
       const sub = subscribe(`/topic/submission/${submissionId}`, (data) => {
         setVerdict(data);
         setSubmitting(false);
+        setProgress(null);
         sub.unsubscribe();
+        progressSub?.unsubscribe?.();
         refresh(roomId);
       });
     } catch (err) {
@@ -123,7 +144,7 @@ export default function Room() {
     if (roomId) { try { await api.leaveRoom(roomId); } catch { /* leaving regardless */ } }
     setRoomId(null); setState(null); setFinalStandings(null);
     setSelectedSlug(null); setVerdict(null); setCodeBySlug({});
-    setProblemDetail(null); setError(''); setHomeMode(null); setHomeLanguage(null);
+    setProblemDetail(null); setSamples([]); setError(''); setHomeMode(null); setHomeLanguage(null);
     setRoomName(''); setJoinCode('');
   }
 
@@ -141,7 +162,7 @@ export default function Room() {
             <button className="mode-card mode-card-tournament" onClick={() => setHomeMode('tournament')}>
               <span className="mode-icon">🏆</span>
               <span className="mode-title">Tournament</span>
-              <span className="mode-desc">2–6 players. Fixed problem set. Race to the top of the leaderboard.</span>
+              <span className="mode-desc">Any number of players, no cap. Fixed problem set. Race to the top of the leaderboard.</span>
             </button>
           </div>
         </motion.div>
@@ -170,11 +191,22 @@ export default function Room() {
         <p className="hint">
           {homeMode === 'duel'
             ? 'Exactly 2 players. Live leaderboard.'
-            : '2+ players, 5 problems, live leaderboard. Never solo.'}
+            : `2+ players, ${problemCount} problems, live leaderboard. Never solo.`}
         </p>
         <div className="room-actions">
           <div>
             <input placeholder={homeMode === 'duel' ? 'Duel name' : 'Room name'} value={roomName} onChange={(e) => setRoomName(e.target.value)} />
+            {homeMode === 'tournament' && (
+              <div className="count-toggle">
+                <span className="hint">Questions</span>
+                <div className="count-pills">
+                  {[2, 3, 4, 5, 6].map((n) => (
+                    <button key={n} type="button" className={`count-pill ${problemCount === n ? 'active' : ''}`}
+                      onClick={() => setProblemCount(n)}>{n}</button>
+                  ))}
+                </div>
+              </div>
+            )}
             <button onClick={createRoom} disabled={!roomName.trim() || submittingHome}>
               {submittingHome ? 'Creating...' : `Create ${homeMode === 'duel' ? 'Duel' : 'Room'}`}
             </button>
@@ -222,10 +254,15 @@ export default function Room() {
           {isDuel ? '⚔️ 1v1 Duel' : '🏆 Tournament'}
         </span>
         <h2>{state.room.name}</h2>
-        <div className="lobby-code-card">
-          <span className="hint">Share this code</span>
+        <button type="button" className="lobby-code-card" onClick={() => {
+          navigator.clipboard?.writeText(state.room.joinCode).then(() => {
+            setCodeCopied(true);
+            setTimeout(() => setCodeCopied(false), 1500);
+          });
+        }}>
+          <span className="hint">{codeCopied ? 'Copied!' : 'Share this code — click to copy'}</span>
           <span className="lobby-code">{state.room.joinCode}</span>
-        </div>
+        </button>
         <h3>Players ({playerCount}{isDuel ? '/2' : ''})</h3>
         <div className="player-list">
           {state.leaderboard.map((row) => (
@@ -259,15 +296,41 @@ export default function Room() {
     );
   }
 
+  if (state.room.status === 'active' && state.room.isDuel) {
+    return (
+      <DuelScreen
+        roomId={roomId}
+        room={state.room}
+        leaderboard={state.leaderboard}
+        me={state.me}
+        username={username}
+        onLeave={leaveToHome}
+      />
+    );
+  }
+
   if (state.room.status === 'active') {
     const problem = state.problems.find((p) => p.slug === activeSlug) || state.problems[0];
     const mySolved = new Set(state.me?.solved || []);
     const mins = Math.floor(secondsLeft / 60);
     const secs = String(secondsLeft % 60).padStart(2, '0');
+    const timeLow = secondsLeft > 0 && secondsLeft < 300;
+    const medal = { 1: '🥇', 2: '🥈', 3: '🥉' };
 
     return (
-      <div className="duel-layout">
+      <motion.div className="duel-layout" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
+        <AnimatePresence>
+          {firstBlood && (
+            <motion.div className="first-blood-toast" initial={{ opacity: 0, x: 40 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 40 }}>
+              🩸 First Blood! +50 bonus
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="duel-main">
+          <div className="tournament-topbar">
+            <span className="tournament-room-name">{state.room.name}</span>
+            <span className={`tournament-timer ${timeLow ? 'timer-low' : ''}`}>{mins}:{secs}</span>
+          </div>
           <div className="duel-tabs">
             {state.problems.map((p) => (
               <button key={p.slug}
@@ -282,72 +345,64 @@ export default function Room() {
             <>
               <div className="statement-panel">
                 <h3>{problem.title}</h3>
-                {problemDetail
-                  ? <div className="statement" style={{whiteSpace:'pre-wrap'}}>{problemDetail.statement}</div>
-                  : <div className="hint">Loading...</div>
-                }
+                {problemDetail ? (
+                  <>
+                    <div className="statement">
+                      {problemDetail.statement.split('\n').filter(Boolean).map((p, i) => <p key={i}>{p}</p>)}
+                    </div>
+                    {samples.map((tc, i) => (
+                      <div key={i} className="sample">
+                        <pre><strong>Sample Input {i + 1}</strong>{'\n'}{tc.input}</pre>
+                        <pre><strong>Sample Output {i + 1}</strong>{'\n'}{tc.expectedOutput}</pre>
+                      </div>
+                    ))}
+                  </>
+                ) : <div className="hint">Loading...</div>}
               </div>
-              <div style={{display:'flex', gap:'0.5rem', alignItems:'center'}}>
-                <select value={lang} onChange={(e) => setLang(e.target.value)}>
-                  <option value="java">Java</option>
-                  <option value="python">Python</option>
-                  <option value="cpp">C++</option>
-                </select>
-                <button onClick={submit} disabled={submitting} style={{flex:1}}>
-                  {submitting ? 'Judging...' : 'Submit'}
-                </button>
+              <div className="lang-pills">
+                {['java', 'python', 'cpp'].map((l) => (
+                  <button key={l} className={`lang-pill ${lang === l ? 'active' : ''}`} onClick={() => setLang(l)}>
+                    {l === 'cpp' ? 'C++' : l[0].toUpperCase() + l.slice(1)}
+                  </button>
+                ))}
               </div>
               <Editor
-                height="42vh"
+                height="38vh"
                 language={lang === 'cpp' ? 'cpp' : lang}
                 value={codeBySlug[activeSlug] ?? STARTERS[lang]}
                 onChange={(v) => setCodeBySlug((prev) => ({ ...prev, [activeSlug]: v }))}
                 theme="vs-dark"
               />
-              {verdict && (
-                <div className={`verdict verdict-${verdict.verdict}`}>
-                  {verdict.verdict.toUpperCase()}{verdict.runtimeMs ? ` — ${verdict.runtimeMs}ms` : ''}
-                  {verdict.message ? <div style={{fontSize:'0.8rem',marginTop:'0.25rem',fontWeight:'normal'}}>{verdict.message}</div> : null}
-                </div>
-              )}
+              <button className="duel-submit-btn" onClick={submit} disabled={submitting}>
+                {submitting ? 'Judging...' : 'Submit'}
+              </button>
+              <JudgeFeedback submitting={submitting} progress={progress} verdict={verdict} />
               {error && <p className="error">{error}</p>}
             </>
           )}
         </div>
         <div className="duel-sidebar">
-          <div className="countdown">{mins}:{secs}</div>
           <h3>Leaderboard</h3>
           <table>
-            <thead><tr><th>#</th><th>Player</th><th>Score</th></tr></thead>
+            <thead><tr><th></th><th>Player</th><th>Score</th><th>Solved</th></tr></thead>
             <tbody>
               {state.leaderboard.map((row) => (
-                <tr key={row.username} className={row.username === username ? 'me' : ''}>
-                  <td>{row.rank}</td><td>{row.username}</td><td>{row.score}</td>
-                </tr>
+                <motion.tr key={row.username} layout transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                  className={row.username === username ? 'me' : ''}>
+                  <td>{medal[row.rank] || row.rank}</td><td>{row.username}</td><td>{row.score}</td><td>{row.solvedCount}</td>
+                </motion.tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </motion.div>
     );
   }
 
   // finished
   const standings = finalStandings || state.leaderboard;
+  const iWon = standings[0]?.username === username;
   return (
-    <div className="page">
-      <h2>{state.room.name} — Final Standings</h2>
-      <table>
-        <thead><tr><th>Rank</th><th>Player</th><th>Score</th></tr></thead>
-        <tbody>
-          {standings.map((row) => (
-            <tr key={row.username} className={row.rank === 1 ? 'winner' : ''}>
-              <td>{row.rank === 1 ? '🏆' : row.rank}</td><td>{row.username}</td><td>{row.score}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <button onClick={leaveToHome} className="start-btn">New Duel</button>
-    </div>
+    <ResultsScreen standings={standings} iWon={iWon} onLeave={leaveToHome} />
   );
 }

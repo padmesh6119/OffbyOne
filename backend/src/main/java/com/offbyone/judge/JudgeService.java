@@ -65,6 +65,8 @@ public class JudgeService {
         int testIndex = 0;
         for (TestCase tc : testCases) {
             testIndex++;
+            ws.convertAndSend("/topic/submission/" + submission.getId() + "/progress",
+                Map.of("current", testIndex, "total", testCases.size()));
             RunResult result = run(submission.getCode(), submission.getLanguage(), tc.getInput(), problem.getTimeLimitMs(), problem.getMemoryLimitMb());
             totalRuntime = Math.max(totalRuntime, result.runtimeMs());
             if (result.verdict().equals("ce")) { verdict = "ce"; message = result.message(); break; }
@@ -80,7 +82,7 @@ public class JudgeService {
                 if (tc.isSample()) {
                     sampleFailed = Map.of("input", tc.getInput(), "expected", tc.getExpectedOutput(), "got", result.stdout());
                 } else {
-                    message = "Test case " + testIndex + " of " + testCases.size() + " failed";
+                    message = "Test case " + testIndex + " failed";
                 }
                 break;
             }
@@ -90,6 +92,7 @@ public class JudgeService {
         submissionRepo.save(submission);
         Map<String, Object> verdictPayload = new java.util.LinkedHashMap<>();
         verdictPayload.put("verdict", verdict); verdictPayload.put("runtimeMs", totalRuntime); verdictPayload.put("message", message);
+        verdictPayload.put("testIndex", testIndex); verdictPayload.put("totalTests", testCases.size());
         if (sampleFailed != null) verdictPayload.put("sampleFailed", sampleFailed);
         ws.convertAndSend("/topic/submission/" + submission.getId(), verdictPayload);
 
@@ -99,6 +102,7 @@ public class JudgeService {
             else if ("wrong_answer".equals(verdict)) applyWrongAnswerPenalty(submission);
             Map<String, Object> roomPayload = new java.util.LinkedHashMap<>();
             roomPayload.put("submissionId", submission.getId()); roomPayload.put("userId", submission.getUser().getId());
+            roomPayload.put("username", submission.getUser().getUsername());
             roomPayload.put("problemId", submission.getProblem().getId()); roomPayload.put("verdict", verdict);
             if (firstBlood) roomPayload.put("firstBlood", true);
             ws.convertAndSend("/topic/room/" + submission.getRoom().getId() + "/submission", roomPayload);

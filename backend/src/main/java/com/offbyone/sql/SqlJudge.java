@@ -18,7 +18,13 @@ public class SqlJudge {
     private static final int QUERY_TIMEOUT_SECONDS = 2;
     private static final int ROW_CAP = 1000;
 
-    public record Verdict(String status, String message) {}
+    public record Verdict(String status, String message,
+                           List<String> actualColumns, List<List<Object>> actualRows,
+                           List<String> expectedColumns, List<List<Object>> expectedRows) {
+        static Verdict error(String status, String message) {
+            return new Verdict(status, message, null, null, null, null);
+        }
+    }
 
     /** Schema + ~5 sample rows per table, for the frontend's schema panel. Never exposes referenceQuery/expected. */
     public List<Map<String, Object>> previewTables(SqlProblem problem) {
@@ -59,18 +65,18 @@ public class SqlJudge {
 
     public Verdict judge(SqlProblem problem, String playerQuery) {
         String trimmed = playerQuery == null ? "" : playerQuery.trim();
-        if (trimmed.isEmpty()) return new Verdict("error", "Empty query");
+        if (trimmed.isEmpty()) return Verdict.error("error", "Empty query");
 
         String body = trimmed.endsWith(";") ? trimmed.substring(0, trimmed.length() - 1) : trimmed;
-        if (body.contains(";")) return new Verdict("error", "Only a single statement is allowed");
+        if (body.contains(";")) return Verdict.error("error", "Only a single statement is allowed");
 
         String upper = body.toUpperCase(Locale.ROOT);
         if (!(upper.startsWith("SELECT") || upper.startsWith("WITH"))) {
-            return new Verdict("error", "Only SELECT queries are allowed");
+            return Verdict.error("error", "Only SELECT queries are allowed");
         }
         for (String kw : FORBIDDEN_KEYWORDS) {
             if (upper.matches("(?s).*\\b" + kw + "\\b.*")) {
-                return new Verdict("error", "Query contains a disallowed keyword: " + kw);
+                return Verdict.error("error", "Query contains a disallowed keyword: " + kw);
             }
         }
 
@@ -80,12 +86,14 @@ public class SqlJudge {
                 for (String stmt : problem.seedData()) setup.execute(stmt);
             }
 
+            List<String> actualColumns = new ArrayList<>();
             List<List<Object>> actualRows = new ArrayList<>();
             try (Statement st = con.createStatement()) {
                 st.setQueryTimeout(QUERY_TIMEOUT_SECONDS);
                 st.setMaxRows(ROW_CAP);
                 try (ResultSet rs = st.executeQuery(body)) {
                     int colCount = rs.getMetaData().getColumnCount();
+                    for (int i = 1; i <= colCount; i++) actualColumns.add(rs.getMetaData().getColumnLabel(i));
                     while (rs.next()) {
                         List<Object> row = new ArrayList<>();
                         for (int i = 1; i <= colCount; i++) row.add(rs.getObject(i));
@@ -95,13 +103,15 @@ public class SqlJudge {
             }
 
             boolean match = compare(problem.expected().rows(), actualRows, problem.ordered());
-            return match ? new Verdict("accepted", "") : new Verdict("wrong_answer", "");
+            if (match) return new Verdict("accepted", "", actualColumns, actualRows, null, null);
+            return new Verdict("wrong_answer", "", actualColumns, actualRows,
+                    problem.expected().columns(), problem.expected().rows());
         } catch (SQLException e) {
             String msg = e.getMessage();
             if (msg != null && msg.toLowerCase(Locale.ROOT).contains("timeout")) {
-                return new Verdict("tle", "Query timed out");
+                return Verdict.error("tle", "Query timed out");
             }
-            return new Verdict("error", msg == null ? "SQL error" : msg);
+            return Verdict.error("error", msg == null ? "SQL error" : msg);
         }
     }
 

@@ -24,7 +24,7 @@ button {
   font-weight: 700;
   transition: transform 0.12s ease, filter 0.12s ease;
 }
-button:not(.link-btn):not(.duel-tab):hover:not(:disabled) { transform: scale(1.03); filter: brightness(1.08); }
+button:not(.link-btn):not(.duel-tab):not(.lobby-code-card):hover:not(:disabled) { transform: scale(1.03); filter: brightness(1.08); }
 button:disabled { cursor: not-allowed; }
 
 nav { display: flex; gap: 1.5rem; align-items: center; padding: 1rem 2rem;
@@ -150,9 +150,10 @@ tr.winner td { color: var(--color-primary); font-weight: 700; }
   border-radius: 999px; margin-bottom: 0.75rem; }
 .mode-badge-duel { background: rgba(255, 225, 53, 0.15); color: var(--color-primary); }
 .mode-badge-tournament { background: rgba(255, 107, 53, 0.15); color: var(--color-accent); }
-.lobby-code-card { display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+.lobby-code-card { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; width: 100%;
   background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px;
-  padding: 1.25rem; margin: 1rem 0 1.5rem; }
+  padding: 1.25rem; margin: 1rem 0 1.5rem; cursor: pointer; font-family: inherit; transition: border-color 0.15s ease; }
+.lobby-code-card:hover { border-color: var(--color-primary); }
 .lobby-code { font-size: 2.5rem; font-weight: 800; letter-spacing: 6px; color: var(--color-primary); }
 .player-list { display: flex; flex-direction: column; gap: 0.5rem; margin: 1rem 0 1.5rem; }
 .player-row { display: flex; align-items: center; gap: 0.75rem; background: var(--color-surface);
@@ -163,3 +164,104 @@ tr.winner td { color: var(--color-primary); font-weight: 700; }
 .player-avatar-empty { background: var(--color-surface-2); color: var(--color-text-muted); }
 .host-tag { margin-left: auto; font-size: 0.7rem; text-transform: uppercase; color: var(--color-text-muted);
   font-weight: 700; }
+
+/* Duel screen */
+.duel-screen { padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; height: calc(100vh - 60px); }
+.duel-vs-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 1rem;
+  background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 12px; }
+.duel-player { display: flex; align-items: center; gap: 0.75rem; }
+.duel-player-right { flex-direction: row-reverse; }
+.duel-player-name { font-weight: 700; }
+.duel-score-circle { width: 2.75rem; height: 2.75rem; border-radius: 50%; background: var(--color-primary);
+  color: #000; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; font-weight: 800; }
+.duel-vs-center { display: flex; flex-direction: column; align-items: center; gap: 0.2rem; }
+.duel-vs-text { font-size: 1.3rem; font-weight: 900; color: var(--color-primary); letter-spacing: 2px; }
+.round-counter { font-size: 0.8rem; color: var(--color-text-muted); font-weight: 600; }
+.opponent-status { text-align: center; color: var(--color-text-muted); font-size: 0.85rem; padding: 0.25rem; }
+
+.duel-body { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow: hidden; position: relative;
+  border-radius: 12px; transition: box-shadow 0.15s ease; }
+.duel-body.flash-correct { box-shadow: 0 0 0 4px rgba(0, 230, 118, 0.4) inset; }
+.duel-body.flash-wrong { box-shadow: 0 0 0 4px rgba(255, 23, 68, 0.4) inset; }
+.duel-body.shake { animation: shake 0.5s; }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+
+.duel-problem-panel { overflow-y: auto; padding: 1.5rem; background: var(--color-surface);
+  border-radius: 12px; border: 1px solid var(--color-border); }
+.duel-editor-panel { display: flex; flex-direction: column; gap: 0.75rem; }
+
+.lang-pills { display: flex; gap: 0.5rem; }
+.lang-pill { padding: 0.4rem 1rem; background: var(--color-surface); border: 1px solid var(--color-border);
+  color: var(--color-text-muted); font-size: 0.85rem; }
+.lang-pill.active { background: var(--color-primary); color: #000; }
+
+.duel-submit-btn { padding: 0.9rem; background: var(--color-primary); color: #000; font-size: 1.05rem; width: 100%; }
+.duel-submit-btn:disabled { background: var(--color-surface-2); color: var(--color-text-muted); }
+
+.round-flash-overlay, .round-won-overlay { position: fixed; inset: 0; z-index: 50; display: flex;
+  align-items: center; justify-content: center; background: rgba(13, 13, 13, 0.92); text-align: center; }
+.round-flash-overlay span { font-size: 3.5rem; font-weight: 900; color: var(--color-primary); letter-spacing: 4px; }
+.round-won-overlay h2 { font-size: 2rem; margin-bottom: 1rem; color: var(--color-text); }
+.round-won-score { font-size: 3rem; font-weight: 900; color: var(--color-primary); margin-bottom: 0.75rem; }
+.round-won-countdown { color: var(--color-text-muted); font-size: 1.1rem; }
+
+@media (max-width: 768px) {
+  .duel-body { grid-template-columns: 1fr; overflow-y: auto; }
+}
+
+.first-blood-toast { position: fixed; top: 1.25rem; right: 1.25rem; z-index: 60;
+  background: var(--color-primary); color: #000; font-weight: 800; padding: 0.75rem 1.25rem;
+  border-radius: 999px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4); }
+
+/* Tournament screen */
+.tournament-topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.tournament-room-name { font-weight: 700; }
+.tournament-timer { font-size: 1.2rem; font-weight: 800; color: var(--color-text); font-variant-numeric: tabular-nums; }
+.tournament-timer.timer-low { color: var(--color-error); }
+
+.count-toggle { display: flex; flex-direction: column; gap: 0.4rem; }
+.count-pills { display: flex; gap: 0.4rem; }
+.count-pill { width: 2.2rem; height: 2.2rem; padding: 0; background: var(--color-surface-2);
+  border: 1px solid var(--color-border); color: var(--color-text-muted); font-weight: 700; }
+.count-pill.active { background: var(--color-primary); color: #000; border-color: var(--color-primary); }
+
+/* Results screen */
+.results-screen { text-align: center; }
+.trophy-wrap { font-size: 4rem; margin-bottom: 0.5rem; }
+
+/* SQL mode */
+.sql-schema-table { margin: 1rem 0; }
+.sql-schema-table h4 { margin-bottom: 0.4rem; font-size: 0.9rem; color: var(--color-text-muted); }
+.sql-result-table { width: 100%; border-collapse: collapse; background: var(--color-surface);
+  border: 1px solid var(--color-border); border-radius: 8px; overflow: hidden; font-size: 0.85rem; }
+.sql-result-table th, .sql-result-table td { padding: 0.5rem 0.75rem; text-align: left; border-bottom: 1px solid var(--color-border); }
+.sql-result-table th { background: var(--color-surface-2); color: var(--color-text-muted); font-weight: 600; }
+.sql-result-table tr:last-child td { border-bottom: none; }
+.sql-result-panel { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+.sql-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.sql-diff h4 { margin-bottom: 0.4rem; font-size: 0.85rem; color: var(--color-text-muted); }
+@media (max-width: 640px) { .sql-diff { grid-template-columns: 1fr; } }
+.sql-error-box { margin-top: 1rem; background: rgba(255, 23, 68, 0.1); border: 1px solid var(--color-error);
+  border-radius: 8px; padding: 1rem; color: var(--color-error); }
+.sql-error-box pre { margin-top: 0.5rem; white-space: pre-wrap; font-size: 0.85rem; color: var(--color-text); }
+
+/* Judge feedback (shared by duel + tournament) */
+.judge-feedback { padding: 0.85rem 1rem; border-radius: 8px; }
+.judge-pending { display: flex; align-items: center; gap: 0.6rem; color: var(--color-text-muted); background: var(--color-surface); border: 1px solid var(--color-border); }
+.judge-spinner { width: 1rem; height: 1rem; border: 2px solid var(--color-border); border-top-color: var(--color-primary);
+  border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.judge-title { font-weight: 700; }
+.judge-runtime { font-weight: 500; color: var(--color-text-muted); margin-left: 0.4rem; }
+.judge-sub { font-weight: 500; font-size: 0.85rem; margin-top: 0.3rem; }
+.judge-detail { font-weight: 500; font-size: 0.85rem; margin-top: 0.4rem; display: flex; flex-direction: column; gap: 0.2rem; }
+.judge-detail code { background: var(--color-bg); padding: 0.1rem 0.4rem; border-radius: 4px; }
+.judge-code-block { margin-top: 0.5rem; background: var(--color-bg); padding: 0.75rem; border-radius: 6px;
+  font-size: 0.8rem; white-space: pre-wrap; overflow-x: auto; font-weight: 400; }
+
+.judge-feedback.verdict-accepted { background: rgba(0, 230, 118, 0.15); color: var(--color-success); }
+.judge-feedback.verdict-wrong_answer { background: rgba(255, 23, 68, 0.15); color: var(--color-error); }
+.judge-feedback.verdict-tle { background: rgba(255, 107, 53, 0.15); color: var(--color-accent); }
+.judge-feedback.verdict-mle { background: rgba(255, 107, 53, 0.15); color: var(--color-accent); }
+.judge-feedback.verdict-ce, .judge-feedback.verdict-re { background: var(--color-surface-2); color: var(--color-text-muted); }
+.judge-feedback.verdict-ce .judge-title, .judge-feedback.verdict-re .judge-title { color: var(--color-text); }
