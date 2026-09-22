@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 
 import java.io.*;
 import java.nio.file.*;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -118,7 +117,9 @@ public class JudgeService {
      * bubblewrap (unprivileged user namespaces) does NOT work on Render — confirmed via live
      * diagnostic: "bwrap: Creating new namespace failed: Operation not permitted". The platform
      * blocks CLONE_NEWUSER outright, so no namespace-based sandbox is possible here without a
-     * separate VM. This is the fallback: no network/filesystem isolation (real gap, needs a
+     * separate VM. Piston's public API doesn't work either — as of 2/15/2026 it's whitelist-only
+     * and this project doesn't qualify (their own policy excludes individual/hobby projects).
+     * This is the remaining fallback: no network/filesystem isolation (real gap, needs a
      * dedicated judge host to close), but env vars are stripped from the child process (closes
      * the credential-theft path — submitted code can no longer read SUPABASE_DB_PASSWORD/
      * JWT_SECRET/REDIS_PASSWORD) and resource ulimits still apply, both of which need no special
