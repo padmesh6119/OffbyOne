@@ -33,9 +33,15 @@ public class DuelSweeper {
     public void sweep() {
         for (Room room : roomRepo.findByStatus("active")) {
             boolean timeUp = room.getEndTime() != null && LocalDateTime.now().isAfter(room.getEndTime());
-            int totalProblems = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(room.getId()).size();
             List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(room.getId());
-            boolean allSolved = totalProblems > 0 && ranked.stream().anyMatch(p -> p.getSolvedCount() >= totalProblems);
+            // Round-based duel rooms (problemCount == 1) are infinite by design — the problem pool
+            // grows every round, so "solvedCount >= totalProblems" would false-trigger the moment
+            // a player wins every round so far. Only tournament-mode rooms auto-finish this way.
+            boolean allSolved = false;
+            if (room.getProblemCount() > 1) {
+                int totalProblems = roomProblemRepo.findByRoomIdOrderBySortOrderAsc(room.getId()).size();
+                allSolved = totalProblems > 0 && ranked.stream().anyMatch(p -> p.getSolvedCount() >= totalProblems);
+            }
 
             if (!timeUp && !allSolved) continue;
 

@@ -17,6 +17,9 @@ public class Room {
     @Column(name = "end_time") private LocalDateTime endTime;
     @Column(name = "problem_count") private int problemCount = 5;
     @Column(name = "duration_minutes") private int durationMinutes = 30;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_problem_id") private Problem currentProblem;
+    @Column(name = "rounds_played") private int roundsPlayed = 0;
     @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
 
     public UUID getId() { return id; }
@@ -37,4 +40,8 @@ public class Room {
     public int getDurationMinutes() { return durationMinutes; }
     public void setDurationMinutes(int v) { this.durationMinutes = v; }
     public LocalDateTime getCreatedAt() { return createdAt; }
+    public Problem getCurrentProblem() { return currentProblem; }
+    public void setCurrentProblem(Problem v) { this.currentProblem = v; }
+    public int getRoundsPlayed() { return roundsPlayed; }
+    public void setRoundsPlayed(int v) { this.roundsPlayed = v; }
 }

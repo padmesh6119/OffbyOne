@@ -1,5 +1,6 @@
 package com.offbyone.controller;
 
+import com.offbyone.duel.DuelRoundService;
 import com.offbyone.model.*;
 import com.offbyone.repository.*;
 import org.springframework.http.ResponseEntity;
@@ -18,20 +19,28 @@ public class RoomController {
     private final RoomProblemRepository roomProblemRepo;
     private final ProblemRepository problemRepo;
     private final SubmissionRepository submissionRepo;
+    private final DuelRoundService duelRoundService;
     private final SimpMessagingTemplate ws;
 
     public RoomController(RoomRepository roomRepo, RoomParticipantRepository participantRepo,
                            RoomProblemRepository roomProblemRepo, ProblemRepository problemRepo,
-                           SubmissionRepository submissionRepo, SimpMessagingTemplate ws) {
+                           SubmissionRepository submissionRepo, DuelRoundService duelRoundService,
+                           SimpMessagingTemplate ws) {
         this.roomRepo = roomRepo; this.participantRepo = participantRepo;
         this.roomProblemRepo = roomProblemRepo; this.problemRepo = problemRepo;
-        this.submissionRepo = submissionRepo; this.ws = ws;
+        this.submissionRepo = submissionRepo; this.duelRoundService = duelRoundService; this.ws = ws;
     }
 
     @PostMapping
     public ResponseEntity<Room> create(@RequestBody Map<String, String> body, @AuthenticationPrincipal User user) {
         Room room = new Room();
         room.setName(body.get("name")); room.setHost(user); room.setJoinCode(generateCode());
+        if ("duel".equals(body.get("mode"))) {
+            room.setProblemCount(1);
+        } else if (body.get("problemCount") != null) {
+            int pc = Integer.parseInt(body.get("problemCount"));
+            room.setProblemCount(Math.max(2, Math.min(6, pc)));
+        }
         room = roomRepo.save(room);
         addParticipant(room, user);
         return ResponseEntity.ok(room);
@@ -131,6 +140,10 @@ public class RoomController {
             roomInfo.put("endTime", room.getEndTime());
             roomInfo.put("durationMinutes", room.getDurationMinutes());
             roomInfo.put("hostUsername", room.getHost() != null ? room.getHost().getUsername() : null);
+            roomInfo.put("problemCount", room.getProblemCount());
+            roomInfo.put("isDuel", room.getProblemCount() == 1);
+            roomInfo.put("roundsPlayed", room.getRoundsPlayed());
+            roomInfo.put("currentProblemSlug", room.getCurrentProblem() != null ? room.getCurrentProblem().getSlug() : null);
 
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("room", roomInfo);
@@ -146,16 +159,37 @@ public class RoomController {
     public ResponseEntity<?> start(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(r -> {
             if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
-            if (participantRepo.findByRoomIdOrderByScoreDesc(id).size() < 2)
+            int players = participantRepo.findByRoomIdOrderByScoreDesc(id).size();
+            boolean isDuel = r.getProblemCount() == 1;
+
+            if (isDuel && players != 2)
+                return ResponseEntity.status(409).<Object>body(Map.of("error", "A duel needs exactly 2 players"));
+            if (!isDuel && players < 2)
                 return ResponseEntity.status(409).<Object>body(Map.of("error", "A duel needs at least 2 players"));
 
-            if (roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).isEmpty()) autoAssignProblems(r);
-
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
-            r.setStatus("active"); r.setStartTime(now); r.setEndTime(now.plusMinutes(r.getDurationMinutes()));
+            r.setStatus("active"); r.setStartTime(now);
+            if (isDuel) {
+                r.setEndTime(null); // duel is round-based, no fixed end time
+            } else {
+                r.setEndTime(now.plusMinutes(r.getDurationMinutes()));
+                if (roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).isEmpty()) autoAssignProblems(r);
+            }
             r = roomRepo.save(r);
             ws.convertAndSend("/topic/room/" + r.getId() + "/lobby", Map.of("event", "started"));
+            if (isDuel) duelRoundService.advanceRound(r.getId());
             return ResponseEntity.<Object>ok(r);
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping("/{id}/next-problem")
+    @Transactional
+    public ResponseEntity<?> nextProblem(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        return roomRepo.findById(id).map(r -> {
+            if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
+            if (r.getProblemCount() != 1) return ResponseEntity.badRequest().<Object>body(Map.of("error", "Not a duel room"));
+            duelRoundService.advanceRound(id);
+            return ResponseEntity.<Object>ok(Map.of("round", r.getRoundsPlayed()));
         }).orElse(ResponseEntity.notFound().build());
     }
 

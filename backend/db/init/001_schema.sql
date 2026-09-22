@@ -41,6 +41,8 @@ CREATE TABLE rooms (
   end_time TIMESTAMP,
   problem_count INTEGER NOT NULL DEFAULT 5,
   duration_minutes INTEGER NOT NULL DEFAULT 30,
+  current_problem_id UUID REFERENCES problems(id),
+  rounds_played INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 

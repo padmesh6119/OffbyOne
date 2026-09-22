@@ -1,6 +1,7 @@
 package com.offbyone.judge;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.offbyone.duel.DuelRoundService;
 import com.offbyone.model.Problem;
 import com.offbyone.model.Room;
 import com.offbyone.model.RoomParticipant;
@@ -39,16 +40,17 @@ public class JudgeService {
     private final RoomProblemRepository roomProblemRepo;
     private final SimpMessagingTemplate ws;
     private final ObjectMapper json;
+    private final DuelRoundService duelRoundService;
 
     @Value("${judge0.api.key:}")
     private String apiKey;
 
     public JudgeService(SubmissionRepository submissionRepo, TestCaseRepository testCaseRepo,
                          RoomParticipantRepository participantRepo, RoomProblemRepository roomProblemRepo,
-                         SimpMessagingTemplate ws, ObjectMapper json) {
+                         SimpMessagingTemplate ws, ObjectMapper json, DuelRoundService duelRoundService) {
         this.submissionRepo = submissionRepo; this.testCaseRepo = testCaseRepo;
         this.participantRepo = participantRepo; this.roomProblemRepo = roomProblemRepo;
-        this.ws = ws; this.json = json;
+        this.ws = ws; this.json = json; this.duelRoundService = duelRoundService;
     }
 
     @Async
@@ -92,8 +94,13 @@ public class JudgeService {
         boolean firstBlood = submissionRepo.findByRoomIdAndProblemIdAndVerdict(roomId, problemId, "accepted").stream()
             .noneMatch(s -> !s.getId().equals(submission.getId()));
 
-        int basePoints = roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId).map(rp -> rp.getPoints()).orElse(100);
         Room room = submission.getRoom();
+        if (room.getProblemCount() == 1) {
+            if (firstBlood) handleDuelRoundWin(submission, room);
+            return; // duel mode: only the round winner scores, no decay/bonus scoring below
+        }
+
+        int basePoints = roomProblemRepo.findByRoomIdAndProblemId(roomId, problemId).map(rp -> rp.getPoints()).orElse(100);
         int points = basePoints;
         if (room.getStartTime() != null && room.getEndTime() != null) {
             long totalMs = java.time.Duration.between(room.getStartTime(), room.getEndTime()).toMillis();
@@ -125,7 +132,31 @@ public class JudgeService {
         participantRepo.save(participant);
     }
 
+    /** Duel mode: the round winner gets +1 score (rounds won), then the next round starts after a 5s pause. */
+    private void handleDuelRoundWin(Submission submission, Room room) {
+        UUID userId = submission.getUser().getId();
+        RoomParticipant participant = participantRepo.findByRoomIdAndUserId(room.getId(), userId).orElseGet(() -> {
+            RoomParticipant p = new RoomParticipant();
+            p.setRoom(room); p.setUser(submission.getUser());
+            return p;
+        });
+        participant.setScore(participant.getScore() + 1);
+        participant.setSolvedCount(participant.getSolvedCount() + 1);
+        participant.setLastSolveAt(java.time.LocalDateTime.now());
+        participantRepo.save(participant);
+
+        ws.convertAndSend("/topic/room/" + room.getId() + "/lobby", Map.of(
+            "event", "round_won", "winner", submission.getUser().getUsername(), "round", room.getRoundsPlayed()));
+
+        UUID roomId = room.getId();
+        new Thread(() -> {
+            try { Thread.sleep(5000); } catch (InterruptedException ignored) {}
+            duelRoundService.advanceRound(roomId);
+        }).start();
+    }
+
     private void applyWrongAnswerPenalty(Submission submission) {
+        if (submission.getRoom().getProblemCount() == 1) return; // no WA penalty in round-based duel mode
         UUID roomId = submission.getRoom().getId(), problemId = submission.getProblem().getId(), userId = submission.getUser().getId();
         boolean alreadySolved = submissionRepo.findByRoomIdAndProblemIdAndUserId(roomId, problemId, userId).stream()
             .anyMatch(s -> "accepted".equals(s.getVerdict()));
@@ -135,6 +166,29 @@ public class JudgeService {
             p.setScore(Math.max(0, p.getScore() - 5));
             participantRepo.save(p);
         });
+    }
+
+    /** Temporary diagnostic: shows whether the key is set and the raw Judge0 response, to debug why judging fails. */
+    public Map<String, Object> diagnoseJudge0() {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("apiKeyPresent", !apiKey.isBlank());
+        result.put("apiKeyLength", apiKey.length());
+        try {
+            String body = json.writeValueAsString(Map.of(
+                "language_id", 71, "source_code", "print(1)", "stdin", ""
+            ));
+            var reqBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(JUDGE0_URL))
+                .header("Content-Type", "application/json")
+                .header("X-RapidAPI-Host", "judge0-ce.p.rapidapi.com")
+                .POST(HttpRequest.BodyPublishers.ofString(body))
+                .timeout(Duration.ofSeconds(15));
+            if (!apiKey.isBlank()) reqBuilder.header("X-RapidAPI-Key", apiKey);
+            var resp = HTTP.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString());
+            result.put("httpStatus", resp.statusCode());
+            result.put("rawBody", resp.body());
+        } catch (Exception e) { result.put("error", e.toString()); }
+        return result;
     }
 
     private RunResult run(String code, String language, String input, int timeLimitMs, int memoryMb) {
