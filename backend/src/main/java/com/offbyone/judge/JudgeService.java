@@ -110,6 +110,15 @@ public class JudgeService {
             p.setRoom(room); p.setUser(submission.getUser());
             return p;
         });
+
+        // Catch-up: trailing player earns a bonus proportional to the gap with the current
+        // leader, capped so it can't outweigh actually solving problems. Counters snowballing
+        // without needing per-player problem sets (duels share one fixed problem list).
+        List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(roomId);
+        int leaderScore = ranked.isEmpty() ? 0 : ranked.get(0).getScore();
+        int gap = Math.max(0, leaderScore - participant.getScore());
+        points += Math.min(gap / 2, 50);
+
         participant.setScore(participant.getScore() + points);
         participant.setSolvedCount(participant.getSolvedCount() + 1);
         participant.setLastSolveAt(java.time.LocalDateTime.now());

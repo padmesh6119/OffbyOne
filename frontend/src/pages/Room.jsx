@@ -12,6 +12,7 @@ export default function Room() {
 
   const [roomName, setRoomName] = useState('');
   const [joinCode, setJoinCode] = useState('');
+  const [submittingHome, setSubmittingHome] = useState(false);
 
   const [selectedSlug, setSelectedSlug] = useState(null);
   const [lang, setLang] = useState('java');
@@ -25,7 +26,7 @@ export default function Room() {
   const subsRef = useRef([]);
 
   const refresh = useCallback((id) => {
-    api.roomState(id).then(setState).catch(() => {});
+    api.roomState(id).then((s) => { setState(s); setError(''); }).catch((err) => setError(errorMessage(err)));
   }, []);
 
   useEffect(() => {
@@ -68,18 +69,22 @@ export default function Room() {
 
   async function createRoom() {
     setError('');
+    setSubmittingHome(true);
     try {
       const r = await api.createRoom({ name: roomName });
       setRoomId(r.id);
     } catch (err) { setError(errorMessage(err)); }
+    finally { setSubmittingHome(false); }
   }
 
   async function joinRoom() {
     setError('');
+    setSubmittingHome(true);
     try {
       const r = await api.joinRoom(joinCode.trim());
       setRoomId(r.roomId);
     } catch (err) { setError(errorMessage(err)); }
+    finally { setSubmittingHome(false); }
   }
 
   async function startDuel() {
@@ -123,19 +128,36 @@ export default function Room() {
         <div className="room-actions">
           <div>
             <input placeholder="Duel name" value={roomName} onChange={(e) => setRoomName(e.target.value)} />
-            <button onClick={createRoom} disabled={!roomName.trim()}>Create Duel</button>
+            <button onClick={createRoom} disabled={!roomName.trim() || submittingHome}>
+              {submittingHome ? 'Creating...' : 'Create Duel'}
+            </button>
           </div>
           <div>
             <input placeholder="6-char code" value={joinCode} onChange={(e) => setJoinCode(e.target.value.toUpperCase())} />
-            <button onClick={joinRoom} disabled={!joinCode.trim()}>Join Duel</button>
+            <button onClick={joinRoom} disabled={!joinCode.trim() || submittingHome}>
+              {submittingHome ? 'Joining...' : 'Join Duel'}
+            </button>
           </div>
         </div>
+        {submittingHome && <p className="hint">If the backend was idle, this can take up to a minute to wake up.</p>}
         {error && <p className="error">{error}</p>}
       </div>
     );
   }
 
-  if (!state) return <div className="page">Loading...</div>;
+  if (!state) return (
+    <div className="page">
+      <p>Loading...</p>
+      {error && (
+        <>
+          <p className="error">{error}</p>
+          <p className="hint">If the backend was idle, it can take up to a minute to wake up on the free tier.</p>
+          <button onClick={() => refresh(roomId)} className="start-btn">Retry</button>
+          <button onClick={leaveToHome} className="link-btn">Back</button>
+        </>
+      )}
+    </div>
+  );
 
   const isHost = state.room.hostUsername === username;
   const playerCount = state.leaderboard.length;
