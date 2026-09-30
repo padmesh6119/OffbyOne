@@ -10,6 +10,12 @@ function headers() {
 
 async function req(path, options = {}) {
   const res = await fetch(BASE + path, { ...options, headers: headers() });
+  if (res.status === 401 || res.status === 403) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('username');
+    location.href = '/#/join';
+    throw new Error('Session expired, please rejoin.');
+  }
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 }
