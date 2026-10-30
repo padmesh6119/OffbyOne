@@ -20,6 +20,6 @@ public class SqlProblemBank {
         this.bySlug = all.stream().collect(Collectors.toMap(SqlProblem::slug, p -> p));
     }
 
-    public List<SqlProblem> findAll() { return List.copyOf(bySlug.values()); }
+    public List<SqlProblem> findAll() { return bySlug.values().stream().sorted(java.util.Comparator.comparingInt(SqlProblem::rating).thenComparing(SqlProblem::title)).toList(); }
     public Optional<SqlProblem> findBySlug(String slug) { return Optional.ofNullable(bySlug.get(slug)); }
 }

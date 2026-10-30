@@ -1,432 +1,648 @@
 [
- {
-  "slug": "sql-above-dept-avg",
-  "title": "Above Department Average",
-  "difficulty": "medium",
-  "rating": 1400,
-  "pattern": "aggregation+subquery",
-  "schema": [
-   "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
-   "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
-   "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
-  ],
-  "task": "List the names of employees who earn more than the average salary of their own department.",
-  "referenceQuery": "SELECT e.name FROM employees e\n    JOIN (SELECT dept_id, AVG(salary) a FROM employees GROUP BY dept_id) d\n      ON e.dept_id=d.dept_id WHERE e.salary>d.a",
-  "ordered": false,
-  "expected": {
-   "columns": [
-    "name"
-   ],
-   "rows": [
-    [
-     "Ravi"
+  {
+    "slug": "sql-above-dept-avg",
+    "title": "Above Department Average",
+    "difficulty": "medium",
+    "rating": 1400,
+    "pattern": "aggregation+subquery",
+    "schema": [
+      "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
+      "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
     ],
-    [
-     "Kavi"
+    "seedData": [
+      "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+      "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
     ],
-    [
-     "Divya"
+    "task": "List the names of employees who earn more than the average salary of their own department.",
+    "referenceQuery": "SELECT e.name FROM employees e\n    JOIN (SELECT dept_id, AVG(salary) a FROM employees GROUP BY dept_id) d\n      ON e.dept_id=d.dept_id WHERE e.salary>d.a",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Ravi"
+        ],
+        [
+          "Kavi"
+        ],
+        [
+          "Divya"
+        ],
+        [
+          "Vikram"
+        ],
+        [
+          "Rahul"
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO departments VALUES (10,'Alpha'),(20,'Beta'),(30,'Gamma'),(40,'Empty')",
+        "INSERT INTO employees VALUES (1,'Lee',10,100,'2020-01-01'),(2,'Lee',10,300,'2020-01-02'),(3,'Max',10,300,'2020-01-03'),(4,'A|B',20,200,'2020-01-01'),(5,'C',20,200,'2020-01-01'),(6,'Solo',30,50,'2020-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Solo'),(20,'Vacant')",
+        "INSERT INTO employees VALUES (1,'One',10,77,'2021-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+        "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')",
+        "UPDATE employees SET salary=salary*2+17, name='New_' || id",
+        "INSERT INTO departments VALUES (999,'Unstaffed')"
+      ],
+      []
     ],
-    [
-     "Vikram"
+    "explanation": "Compute the average per department, then compare each employee against their own group. A company-wide average answers a different question."
+  },
+  {
+    "slug": "sql-dept-headcount",
+    "title": "Department Headcount",
+    "difficulty": "easy",
+    "rating": 900,
+    "pattern": "group-by",
+    "schema": [
+      "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
+      "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
     ],
-    [
-     "Rahul"
-    ]
-   ]
+    "seedData": [
+      "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+      "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
+    ],
+    "task": "For each department, return its name and the number of employees. Order by department name.",
+    "referenceQuery": "SELECT d.name, COUNT(e.id) AS headcount FROM departments d\n    LEFT JOIN employees e ON e.dept_id=d.id GROUP BY d.id,d.name ORDER BY d.name",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "name",
+        "headcount"
+      ],
+      "rows": [
+        [
+          "Engineering",
+          5
+        ],
+        [
+          "Sales",
+          3
+        ],
+        [
+          "Support",
+          3
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO departments VALUES (10,'Alpha'),(20,'Beta'),(30,'Gamma'),(40,'Empty')",
+        "INSERT INTO employees VALUES (1,'Lee',10,100,'2020-01-01'),(2,'Lee',10,300,'2020-01-02'),(3,'Max',10,300,'2020-01-03'),(4,'A|B',20,200,'2020-01-01'),(5,'C',20,200,'2020-01-01'),(6,'Solo',30,50,'2020-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Solo'),(20,'Vacant')",
+        "INSERT INTO employees VALUES (1,'One',10,77,'2021-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+        "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')",
+        "UPDATE employees SET salary=salary*2+17, name='New_' || id",
+        "INSERT INTO departments VALUES (999,'Unstaffed')"
+      ],
+      []
+    ],
+    "explanation": "Start with departments and LEFT JOIN employees. COUNT(e.id) counts real employees; COUNT(*) counts the empty department row too."
+  },
+  {
+    "slug": "sql-top-earner-per-dept",
+    "title": "Top Earner Per Department",
+    "difficulty": "hard",
+    "rating": 1700,
+    "pattern": "window-function",
+    "schema": [
+      "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
+      "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+      "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
+    ],
+    "task": "Return department id, employee name, and salary for every highest-paid employee in each department. Include ties. Order by department id, then employee name.",
+    "referenceQuery": "SELECT d.id, e.name, e.salary FROM employees e JOIN departments d ON d.id=e.dept_id\n    WHERE e.salary=(SELECT MAX(salary) FROM employees x WHERE x.dept_id=e.dept_id)\n    ORDER BY d.id , e.name",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "id",
+        "name",
+        "salary"
+      ],
+      "rows": [
+        [
+          10,
+          "Divya",
+          91000
+        ],
+        [
+          20,
+          "Vikram",
+          88000
+        ],
+        [
+          30,
+          "Rahul",
+          61000
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO departments VALUES (10,'Alpha'),(20,'Beta'),(30,'Gamma'),(40,'Empty')",
+        "INSERT INTO employees VALUES (1,'Lee',10,100,'2020-01-01'),(2,'Lee',10,300,'2020-01-02'),(3,'Max',10,300,'2020-01-03'),(4,'A|B',20,200,'2020-01-01'),(5,'C',20,200,'2020-01-01'),(6,'Solo',30,50,'2020-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Solo'),(20,'Vacant')",
+        "INSERT INTO employees VALUES (1,'One',10,77,'2021-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+        "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')",
+        "UPDATE employees SET salary=salary*2+17, name='New_' || id",
+        "INSERT INTO departments VALUES (999,'Unstaffed')"
+      ],
+      []
+    ],
+    "explanation": "Use a correlated MAX or RANK partitioned by department. Include every employee tied for the highest salary."
+  },
+  {
+    "slug": "sql-second-highest",
+    "title": "Second Highest Salary",
+    "difficulty": "medium",
+    "rating": 1300,
+    "pattern": "ranking",
+    "schema": [
+      "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
+      "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+      "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
+    ],
+    "task": "Return the second highest distinct salary across all employees. Return no rows if there are fewer than two distinct salaries.",
+    "referenceQuery": "SELECT DISTINCT salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "salary"
+      ],
+      "rows": [
+        [
+          88000
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO departments VALUES (10,'Alpha'),(20,'Beta'),(30,'Gamma'),(40,'Empty')",
+        "INSERT INTO employees VALUES (1,'Lee',10,100,'2020-01-01'),(2,'Lee',10,300,'2020-01-02'),(3,'Max',10,300,'2020-01-03'),(4,'A|B',20,200,'2020-01-01'),(5,'C',20,200,'2020-01-01'),(6,'Solo',30,50,'2020-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Solo'),(20,'Vacant')",
+        "INSERT INTO employees VALUES (1,'One',10,77,'2021-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
+        "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')",
+        "UPDATE employees SET salary=salary*2+17, name='New_' || id",
+        "INSERT INTO departments VALUES (999,'Unstaffed')"
+      ],
+      []
+    ],
+    "explanation": "Remove duplicate salaries before finding the second value. Return no rows if fewer than two distinct salaries exist."
+  },
+  {
+    "slug": "sql-no-employees",
+    "title": "Empty Departments",
+    "difficulty": "easy",
+    "rating": 1000,
+    "pattern": "anti-join",
+    "schema": [
+      "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
+      "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support'),(40,'Legal')",
+      "INSERT INTO employees VALUES (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),(3,'Kavi',30,68000,'2019-11-23')"
+    ],
+    "task": "Return the names of departments that have no employees.",
+    "referenceQuery": "SELECT d.name FROM departments d LEFT JOIN employees e ON e.dept_id=d.id WHERE e.id IS NULL",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Legal"
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO departments VALUES (10,'Alpha'),(20,'Beta'),(30,'Gamma'),(40,'Empty')",
+        "INSERT INTO employees VALUES (1,'Lee',10,100,'2020-01-01'),(2,'Lee',10,300,'2020-01-02'),(3,'Max',10,300,'2020-01-03'),(4,'A|B',20,200,'2020-01-01'),(5,'C',20,200,'2020-01-01'),(6,'Solo',30,50,'2020-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Solo'),(20,'Vacant')",
+        "INSERT INTO employees VALUES (1,'One',10,77,'2021-01-01')"
+      ],
+      [
+        "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support'),(40,'Legal')",
+        "INSERT INTO employees VALUES (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),(3,'Kavi',30,68000,'2019-11-23')",
+        "UPDATE employees SET salary=salary*2+17, name='New_' || id",
+        "INSERT INTO departments VALUES (999,'Unstaffed')"
+      ],
+      []
+    ],
+    "explanation": "A LEFT JOIN with a NULL employee id, or NOT EXISTS, preserves departments with no employees."
+  },
+  {
+    "slug": "sql-customer-total",
+    "title": "Customer Order Totals",
+    "difficulty": "easy",
+    "rating": 1000,
+    "pattern": "join+group-by",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "Return each customer's name and their total order amount, highest total first. Only customers with at least one order. Break total ties by customer id ascending. Customers with the same name are separate customers.",
+    "referenceQuery": "SELECT c.name, SUM(o.amount) AS total FROM customers c JOIN orders o ON o.customer_id=c.id\n    GROUP BY c.id,c.name ORDER BY total DESC, c.id",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "name",
+        "total"
+      ],
+      "rows": [
+        [
+          "Selvam",
+          8100
+        ],
+        [
+          "Nila",
+          7400
+        ],
+        [
+          "Karthik",
+          5500
+        ],
+        [
+          "Priya",
+          3100
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "Join customers to orders, group by customer identity, and sum amounts. Different customers may share a name."
+  },
+  {
+    "slug": "sql-never-ordered",
+    "title": "Customers Without Orders",
+    "difficulty": "easy",
+    "rating": 950,
+    "pattern": "anti-join",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "Return the names of customers who have never placed an order.",
+    "referenceQuery": "SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id=c.id WHERE o.id IS NULL",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Deepa"
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "NOT EXISTS handles unmatched customers even when an order has a NULL customer_id. NOT IN with NULL behaves differently."
+  },
+  {
+    "slug": "sql-city-avg",
+    "title": "Average Order Value By City",
+    "difficulty": "medium",
+    "rating": 1350,
+    "pattern": "join+aggregate",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "For each city, return the city and the average order amount rounded to 2 decimals, for cities that have orders. Order by city.",
+    "referenceQuery": "SELECT c.city, ROUND(AVG(o.amount),2) AS avg_amount FROM customers c\n    JOIN orders o ON o.customer_id=c.id GROUP BY c.city ORDER BY c.city",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "city",
+        "avg_amount"
+      ],
+      "rows": [
+        [
+          "Chennai",
+          3100.0
+        ],
+        [
+          "Coimbatore",
+          1550.0
+        ],
+        [
+          "Madurai",
+          2750.0
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "Average the order rows within each city, not the per-customer averages. Round only the final result."
+  },
+  {
+    "slug": "sql-repeat-customers",
+    "title": "Repeat Customers",
+    "difficulty": "medium",
+    "rating": 1250,
+    "pattern": "having",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "Return the names of customers who placed more than 2 orders.",
+    "referenceQuery": "SELECT c.name FROM customers c JOIN orders o ON o.customer_id=c.id\n    GROUP BY c.id,c.name HAVING COUNT(o.id)>2",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Nila"
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "Group by customer identity and use HAVING COUNT(*) > 2. Customers with exactly two orders must be excluded."
+  },
+  {
+    "slug": "sql-running-total",
+    "title": "Running Order Total",
+    "difficulty": "hard",
+    "rating": 1800,
+    "pattern": "window-function",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "For customer id 1, return each order id, amount, and running total. Order by placed date, then order id. Include each order individually when dates tie.",
+    "referenceQuery": "SELECT id, amount, SUM(amount) OVER (ORDER BY placed, id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running FROM orders WHERE customer_id=1 ORDER BY placed, id",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "id",
+        "amount",
+        "running"
+      ],
+      "rows": [
+        [
+          101,
+          2500,
+          2500
+        ],
+        [
+          102,
+          1800,
+          4300
+        ],
+        [
+          105,
+          3100,
+          7400
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "Use SUM(amount) OVER with ROWS UNBOUNDED PRECEDING. Order by placed and id so same-day orders have a deterministic sequence."
+  },
+  {
+    "slug": "sql-month-revenue",
+    "title": "Monthly Revenue",
+    "difficulty": "medium",
+    "rating": 1300,
+    "pattern": "date+group-by",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "Return each month (YYYY-MM) and total revenue for that month, ordered by month.",
+    "referenceQuery": "SELECT substr(placed,1,7) AS month, SUM(amount) AS revenue FROM orders\n    GROUP BY month ORDER BY month",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "month",
+        "revenue"
+      ],
+      "rows": [
+        [
+          "2024-01",
+          14400
+        ],
+        [
+          "2024-02",
+          3000
+        ],
+        [
+          "2024-03",
+          4000
+        ],
+        [
+          "2024-04",
+          2700
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "Group using both year and month. Grouping only by month number combines different years."
+  },
+  {
+    "slug": "sql-above-overall-avg",
+    "title": "Orders Above Overall Average",
+    "difficulty": "medium",
+    "rating": 1200,
+    "pattern": "scalar-subquery",
+    "schema": [
+      "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
+      "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+      "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
+    ],
+    "task": "Return the ids of orders whose amount is greater than the overall average order amount.",
+    "referenceQuery": "SELECT id FROM orders WHERE amount > (SELECT AVG(amount) FROM orders)",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "id"
+      ],
+      "rows": [
+        [
+          103
+        ],
+        [
+          105
+        ],
+        [
+          107
+        ]
+      ]
+    },
+    "hiddenDatasets": [
+      [
+        "INSERT INTO customers VALUES (1,'Same','North'),(2,'Same','North'),(3,'Zero','South'),(4,'A|B','West'),(5,'Idle','West')",
+        "INSERT INTO orders VALUES (11,1,100,'2023-01-01'),(12,1,300,'2024-01-01'),(13,1,200,'2024-01-01'),(14,2,50,'2024-02-01'),(15,2,100,'2024-02-02'),(16,4,400,'2024-03-01'),(17,NULL,250,'2024-04-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Only','North'),(2,'Never','South')",
+        "INSERT INTO orders VALUES (21,1,0,'2025-12-01')"
+      ],
+      [
+        "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
+        "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')",
+        "UPDATE orders SET amount=amount*3+19",
+        "UPDATE customers SET name='New_' || id, city='Region_' || city"
+      ],
+      []
+    ],
+    "explanation": "Compare each amount to the average over all orders. Use a strict greater-than comparison."
   }
- },
- {
-  "slug": "sql-dept-headcount",
-  "title": "Department Headcount",
-  "difficulty": "easy",
-  "rating": 900,
-  "pattern": "group-by",
-  "schema": [
-   "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
-   "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
-   "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
-  ],
-  "task": "For each department, return its name and the number of employees. Order by department name.",
-  "referenceQuery": "SELECT d.name, COUNT(e.id) AS headcount FROM departments d\n    LEFT JOIN employees e ON e.dept_id=d.id GROUP BY d.id,d.name ORDER BY d.name",
-  "ordered": true,
-  "expected": {
-   "columns": [
-    "name",
-    "headcount"
-   ],
-   "rows": [
-    [
-     "Engineering",
-     5
-    ],
-    [
-     "Sales",
-     3
-    ],
-    [
-     "Support",
-     3
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-top-earner-per-dept",
-  "title": "Top Earner Per Department",
-  "difficulty": "hard",
-  "rating": 1700,
-  "pattern": "window-function",
-  "schema": [
-   "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
-   "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
-   "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
-  ],
-  "task": "For each department return the name of its highest paid employee and that salary. Order by department id.",
-  "referenceQuery": "SELECT d.id, e.name, e.salary FROM employees e JOIN departments d ON d.id=e.dept_id\n    WHERE e.salary=(SELECT MAX(salary) FROM employees x WHERE x.dept_id=e.dept_id)\n    ORDER BY d.id",
-  "ordered": true,
-  "expected": {
-   "columns": [
-    "id",
-    "name",
-    "salary"
-   ],
-   "rows": [
-    [
-     10,
-     "Divya",
-     91000
-    ],
-    [
-     20,
-     "Vikram",
-     88000
-    ],
-    [
-     30,
-     "Rahul",
-     61000
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-second-highest",
-  "title": "Second Highest Salary",
-  "difficulty": "medium",
-  "rating": 1300,
-  "pattern": "ranking",
-  "schema": [
-   "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
-   "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support')",
-   "INSERT INTO employees VALUES\n (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),\n (3,'Kavi',10,68000,'2019-11-23'),(4,'Divya',10,91000,'2022-01-09'),\n (5,'Meena',20,54000,'2021-06-30'),(6,'Suresh',30,39000,'2023-02-17'),\n (7,'Latha',30,47000,'2020-09-05'),(8,'Vikram',20,88000,'2018-04-12'),\n (9,'Anita',10,52000,'2023-08-21'),(10,'Rahul',30,61000,'2019-05-19'),(11,'Bala',10,64000,'2022-05-03')"
-  ],
-  "task": "Return the second highest distinct salary across all employees.",
-  "referenceQuery": "SELECT DISTINCT salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1",
-  "ordered": false,
-  "expected": {
-   "columns": [
-    "salary"
-   ],
-   "rows": [
-    [
-     88000
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-no-employees",
-  "title": "Empty Departments",
-  "difficulty": "easy",
-  "rating": 1000,
-  "pattern": "anti-join",
-  "schema": [
-   "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
-   "CREATE TABLE employees (id INTEGER PRIMARY KEY, name TEXT, dept_id INTEGER, salary INTEGER, hired TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO departments VALUES (10,'Engineering'),(20,'Sales'),(30,'Support'),(40,'Legal')",
-   "INSERT INTO employees VALUES (1,'Arun',10,45000,'2021-03-14'),(2,'Ravi',20,72000,'2020-07-01'),(3,'Kavi',30,68000,'2019-11-23')"
-  ],
-  "task": "Return the names of departments that have no employees.",
-  "referenceQuery": "SELECT d.name FROM departments d LEFT JOIN employees e ON e.dept_id=d.id WHERE e.id IS NULL",
-  "ordered": false,
-  "expected": {
-   "columns": [
-    "name"
-   ],
-   "rows": [
-    [
-     "Legal"
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-customer-total",
-  "title": "Customer Order Totals",
-  "difficulty": "easy",
-  "rating": 1000,
-  "pattern": "join+group-by",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "Return each customer's name and their total order amount, highest total first. Only customers with at least one order.",
-  "referenceQuery": "SELECT c.name, SUM(o.amount) AS total FROM customers c JOIN orders o ON o.customer_id=c.id\n    GROUP BY c.id,c.name ORDER BY total DESC",
-  "ordered": true,
-  "expected": {
-   "columns": [
-    "name",
-    "total"
-   ],
-   "rows": [
-    [
-     "Selvam",
-     8100
-    ],
-    [
-     "Nila",
-     7400
-    ],
-    [
-     "Karthik",
-     5500
-    ],
-    [
-     "Priya",
-     3100
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-never-ordered",
-  "title": "Customers Without Orders",
-  "difficulty": "easy",
-  "rating": 950,
-  "pattern": "anti-join",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "Return the names of customers who have never placed an order.",
-  "referenceQuery": "SELECT c.name FROM customers c LEFT JOIN orders o ON o.customer_id=c.id WHERE o.id IS NULL",
-  "ordered": false,
-  "expected": {
-   "columns": [
-    "name"
-   ],
-   "rows": [
-    [
-     "Deepa"
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-city-avg",
-  "title": "Average Order Value By City",
-  "difficulty": "medium",
-  "rating": 1350,
-  "pattern": "join+aggregate",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "For each city, return the city and the average order amount rounded to 2 decimals, for cities that have orders. Order by city.",
-  "referenceQuery": "SELECT c.city, ROUND(AVG(o.amount),2) AS avg_amount FROM customers c\n    JOIN orders o ON o.customer_id=c.id GROUP BY c.city ORDER BY c.city",
-  "ordered": true,
-  "expected": {
-   "columns": [
-    "city",
-    "avg_amount"
-   ],
-   "rows": [
-    [
-     "Chennai",
-     3100.0
-    ],
-    [
-     "Coimbatore",
-     1550.0
-    ],
-    [
-     "Madurai",
-     2750.0
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-repeat-customers",
-  "title": "Repeat Customers",
-  "difficulty": "medium",
-  "rating": 1250,
-  "pattern": "having",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "Return the names of customers who placed more than 2 orders.",
-  "referenceQuery": "SELECT c.name FROM customers c JOIN orders o ON o.customer_id=c.id\n    GROUP BY c.id,c.name HAVING COUNT(o.id)>2",
-  "ordered": false,
-  "expected": {
-   "columns": [
-    "name"
-   ],
-   "rows": [
-    [
-     "Nila"
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-running-total",
-  "title": "Running Order Total",
-  "difficulty": "hard",
-  "rating": 1800,
-  "pattern": "window-function",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "For customer id 1, return each order id, its amount, and a running total of amounts ordered by placed date.",
-  "referenceQuery": "SELECT id, amount, SUM(amount) OVER (ORDER BY placed ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS running\n    FROM orders WHERE customer_id=1 ORDER BY placed",
-  "ordered": true,
-  "expected": {
-   "columns": [
-    "id",
-    "amount",
-    "running"
-   ],
-   "rows": [
-    [
-     101,
-     2500,
-     2500
-    ],
-    [
-     102,
-     1800,
-     4300
-    ],
-    [
-     105,
-     3100,
-     7400
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-month-revenue",
-  "title": "Monthly Revenue",
-  "difficulty": "medium",
-  "rating": 1300,
-  "pattern": "date+group-by",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "Return each month (YYYY-MM) and total revenue for that month, ordered by month.",
-  "referenceQuery": "SELECT substr(placed,1,7) AS month, SUM(amount) AS revenue FROM orders\n    GROUP BY month ORDER BY month",
-  "ordered": true,
-  "expected": {
-   "columns": [
-    "month",
-    "revenue"
-   ],
-   "rows": [
-    [
-     "2024-01",
-     14400
-    ],
-    [
-     "2024-02",
-     3000
-    ],
-    [
-     "2024-03",
-     4000
-    ],
-    [
-     "2024-04",
-     2700
-    ]
-   ]
-  }
- },
- {
-  "slug": "sql-above-overall-avg",
-  "title": "Orders Above Overall Average",
-  "difficulty": "medium",
-  "rating": 1200,
-  "pattern": "scalar-subquery",
-  "schema": [
-   "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
-   "CREATE TABLE orders (id INTEGER PRIMARY KEY, customer_id INTEGER, amount INTEGER, placed TEXT)"
-  ],
-  "seedData": [
-   "INSERT INTO customers VALUES (1,'Nila','Chennai'),(2,'Karthik','Madurai'),(3,'Priya','Coimbatore'),(4,'Selvam','Chennai'),(5,'Deepa','Salem')",
-   "INSERT INTO orders VALUES\n (101,1,2500,'2024-01-05'),(102,1,1800,'2024-02-11'),(103,2,4300,'2024-01-19'),\n (104,3,900,'2024-03-02'),(105,1,3100,'2024-03-15'),(106,2,1200,'2024-02-27'),\n (107,4,7600,'2024-01-30'),(108,3,2200,'2024-04-08'),(109,4,500,'2024-04-21')"
-  ],
-  "task": "Return the ids of orders whose amount is greater than the overall average order amount.",
-  "referenceQuery": "SELECT id FROM orders WHERE amount > (SELECT AVG(amount) FROM orders)",
-  "ordered": false,
-  "expected": {
-   "columns": [
-    "id"
-   ],
-   "rows": [
-    [
-     103
-    ],
-    [
-     105
-    ],
-    [
-     107
-    ]
-   ]
-  }
- }
 ]

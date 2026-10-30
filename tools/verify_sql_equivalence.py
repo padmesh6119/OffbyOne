@@ -1,5 +1,6 @@
 import json, sqlite3
-BANK=json.load(open("/home/pontiff/playground/codecompete/backend/src/main/resources/sql-problems.json"))
+from pathlib import Path
+BANK=json.load(open(Path(__file__).resolve().parents[1] / "backend/src/main/resources/sql-problems.json"))
 by={b["slug"]:b for b in BANK}
 
 def run(b,q):
@@ -47,3 +48,5 @@ for slug,label,q,should in CASES:
     print(f"{mark} {slug:26} {label:26} accepted={got} expected={should}")
 print(f"\n{ok} correct / {fail} incorrect")
 print("VERDICT:", "answer-by-execution works" if fail==0 else "comparison logic needs work")
+
+raise SystemExit(1 if fail else 0)

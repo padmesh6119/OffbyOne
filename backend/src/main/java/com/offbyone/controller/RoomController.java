@@ -55,6 +55,7 @@ public class RoomController {
     @Transactional
     public ResponseEntity<?> join(@PathVariable String code, @AuthenticationPrincipal User user) {
         return roomRepo.findByJoinCode(code).map(r -> {
+            rejectArena(r);
             addParticipant(r, user);
             ws.convertAndSend("/topic/room/" + r.getId() + "/lobby", Map.of("event", "joined", "username", user.getUsername()));
             return ResponseEntity.<Object>ok(Map.of("roomId", r.getId(), "name", r.getName(), "joinCode", r.getJoinCode(), "status", r.getStatus()));
@@ -73,6 +74,7 @@ public class RoomController {
     @Transactional
     public ResponseEntity<?> assignProblems(@PathVariable UUID id, @RequestBody List<Map<String, Object>> body, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(room -> {
+            rejectArena(room);
             if (!room.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
             for (Map<String, Object> entry : body) {
                 Problem problem = problemRepo.findById(UUID.fromString((String) entry.get("problemId"))).orElseThrow();
@@ -89,6 +91,7 @@ public class RoomController {
     @GetMapping("/{id}/problems")
     @Transactional(readOnly = true)
     public List<Map<String, Object>> roomProblems(@PathVariable UUID id) {
+        roomRepo.findById(id).ifPresent(this::rejectArena);
         return roomProblemRepo.findByRoomIdOrderBySortOrderAsc(id).stream().map(this::roomProblemEntry).toList();
     }
 
@@ -115,6 +118,7 @@ public class RoomController {
     @Transactional(readOnly = true)
     public ResponseEntity<?> state(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(room -> {
+            rejectArena(room);
             List<Submission> accepted = submissionRepo.findByRoomId(id).stream()
                     .filter(s -> "accepted".equals(s.getVerdict())).toList();
 
@@ -176,6 +180,7 @@ public class RoomController {
     @Transactional
     public ResponseEntity<?> start(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(r -> {
+            rejectArena(r);
             if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
             int players = participantRepo.findByRoomIdOrderByScoreDesc(id).size();
             boolean isDuel = r.getProblemCount() == 1;
@@ -205,6 +210,7 @@ public class RoomController {
     @Transactional
     public ResponseEntity<?> leave(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(room -> {
+            rejectArena(room);
             if ("finished".equals(room.getStatus())) return ResponseEntity.ok(Map.of("status", "finished"));
 
             boolean isDuel = room.getProblemCount() == 1;
@@ -236,6 +242,7 @@ public class RoomController {
     @Transactional
     public ResponseEntity<?> nextProblem(@PathVariable UUID id, @AuthenticationPrincipal User user) {
         return roomRepo.findById(id).map(r -> {
+            rejectArena(r);
             if (!r.getHost().getId().equals(user.getId())) return ResponseEntity.status(403).<Object>build();
             if (r.getProblemCount() != 1) return ResponseEntity.badRequest().<Object>body(Map.of("error", "Not a duel room"));
             duelRoundService.advanceRound(id);
@@ -294,6 +301,10 @@ public class RoomController {
             p.setRoom(room); p.setUser(user);
             participantRepo.save(p);
         }
+    }
+
+    private void rejectArena(Room room) {
+        if ("sql-arena".equals(room.getTrack())) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Use the SQL arena for this match.");
     }
 
     private String generateCode() {

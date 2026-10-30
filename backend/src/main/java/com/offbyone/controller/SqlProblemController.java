@@ -14,9 +14,11 @@ import java.util.Map;
 public class SqlProblemController {
     private final SqlProblemBank bank;
     private final SqlJudge judge;
+    private final com.offbyone.repository.SubmissionRepository submissions;
+    private final com.offbyone.arena.SqlRequestLimit limit;
 
-    public SqlProblemController(SqlProblemBank bank, SqlJudge judge) {
-        this.bank = bank; this.judge = judge;
+    public SqlProblemController(SqlProblemBank bank, SqlJudge judge, com.offbyone.repository.SubmissionRepository submissions, com.offbyone.arena.SqlRequestLimit limit) {
+        this.bank = bank; this.judge = judge; this.submissions=submissions; this.limit=limit;
     }
 
     @GetMapping
@@ -36,10 +38,25 @@ public class SqlProblemController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    @PostMapping("/{slug}/run")
+    public ResponseEntity<?> run(@PathVariable String slug, @RequestBody Map<String,String> body,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal com.offbyone.model.User user) {
+        limit.check(user);
+        return bank.findBySlug(slug).<ResponseEntity<?>>map(p -> ResponseEntity.ok(judge.runSample(p,body.get("query"))))
+            .orElse(ResponseEntity.notFound().build());
+    }
+
     @PostMapping("/{slug}/submit")
-    public ResponseEntity<?> submit(@PathVariable String slug, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> submit(@PathVariable String slug, @RequestBody Map<String, String> body, @org.springframework.security.core.annotation.AuthenticationPrincipal com.offbyone.model.User user) {
+        limit.check(user);
+        String query=body.get("query");
+        if (query==null || query.isBlank() || query.length()>16000) return ResponseEntity.badRequest().body("Write a query of 1–16,000 characters.");
         return bank.findBySlug(slug).<ResponseEntity<?>>map(p -> {
-            SqlJudge.Verdict v = judge.judge(p, body.get("query"));
+            SqlJudge.Verdict v = judge.judge(p, query);
+            if (!"busy".equals(v.status())) {
+                var submission=new com.offbyone.model.Submission(); submission.setUser(user); submission.setSqlSlug(slug);
+                submission.setLanguage("sql"); submission.setCode(query); submission.setVerdict(v.status()); submissions.save(submission);
+            }
             Map<String, Object> result = new java.util.LinkedHashMap<>();
             result.put("verdict", v.status());
             result.put("message", v.message());

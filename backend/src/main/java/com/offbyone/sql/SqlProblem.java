@@ -13,7 +13,9 @@ public record SqlProblem(
         String task,
         String referenceQuery,
         boolean ordered,
-        Expected expected
+        Expected expected,
+        List<List<String>> hiddenDatasets,
+        String explanation
 ) {
     public record Expected(List<String> columns, List<List<Object>> rows) {}
 }

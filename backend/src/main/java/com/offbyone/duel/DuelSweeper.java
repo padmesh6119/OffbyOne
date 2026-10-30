@@ -44,6 +44,7 @@ public class DuelSweeper {
     @Transactional
     public void sweep() {
         for (Room room : roomRepo.findByStatus("active")) {
+            if ("sql-arena".equals(room.getTrack())) continue;
             boolean timeUp = room.getEndTime() != null && LocalDateTime.now().isAfter(room.getEndTime());
             List<RoomParticipant> ranked = participantRepo.findByRoomIdOrderByScoreDescLastSolveAtAsc(room.getId());
             // Round-based duel rooms (problemCount == 1) are infinite by design — the problem pool

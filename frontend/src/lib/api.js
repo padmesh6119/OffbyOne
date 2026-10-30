@@ -10,7 +10,7 @@ function headers() {
 
 async function req(path, options = {}) {
   const res = await fetch(BASE + path, { ...options, headers: headers() });
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 401) {
     localStorage.removeItem('token');
     localStorage.removeItem('username');
     location.href = '/#/join';
@@ -21,6 +21,11 @@ async function req(path, options = {}) {
 }
 
 export const api = {
+  arenaCreate: () => req('/api/sql-arena', { method: 'POST' }),
+  arenaJoin: (code) => req(`/api/sql-arena/join/${encodeURIComponent(code)}`, { method: 'POST' }),
+  arenaState: (id) => req(`/api/sql-arena/${id}`),
+  arenaAction: (id, action, body = {}) => req(`/api/sql-arena/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) }),
+  sqlRun: (slug, query) => req(`/api/sql-problems/${slug}/run`, { method: 'POST', body: JSON.stringify({ query }) }),
   join: (username) => req('/api/auth/join', { method: 'POST', body: JSON.stringify({ username }) }),
   problems: (difficulty) => req('/api/problems' + (difficulty ? `?difficulty=${difficulty}` : '')),
   problem: (slug) => req(`/api/problems/${slug}`),
@@ -44,6 +49,6 @@ export const api = {
 };
 
 export function errorMessage(err) {
-  try { return JSON.parse(err.message).error || err.message; }
+  try { return JSON.parse(err.message).message || JSON.parse(err.message).error || err.message; }
   catch { return err.message; }
 }
