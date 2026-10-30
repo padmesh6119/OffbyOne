@@ -1,6 +1,6 @@
 # OffbyOne — SQL Arena
 
-A desktop application for Java and SQL practice, with a dedicated SQL competition experience at `/#/sql`.
+A desktop application for Java and SQL practice. The home page at `/#/` opens SQL Arena; `/#/sql` remains a compatible invite link. Login, the arena, Java practice and editor, and My Progress share one visual design and persistent navigation. The legacy room/tournament screens and duplicate SQL practice page have been removed from the frontend; their previous source remains recoverable in Git history.
 
 The SQL editor supports a full-width focus mode, Ctrl/Cmd+Enter to run samples, and Ctrl/Cmd+Shift+Enter to submit.
 
@@ -10,7 +10,9 @@ All 12 SQL challenges now have a public dataset and four additional datasets (du
 
 ## Local preview without cloud credentials
 
-Requirements: Java 21, Maven 3.9+, Node.js 20+ and npm.
+Requirements: Java 21, Maven 3.8.7+, Node.js 20+ and npm. The combined launcher uses Linux `setsid` to stop both services cleanly.
+
+From the repository root, run `bash run-local.sh` to start both services. Keep that terminal open; Ctrl+C stops them. Startup logs are in `.local-run/`.
 
 From `backend`, run `mvn spring-boot:run -Dspring-boot.run.profiles=preview`.
 The preview runs on port 8087 and uses a separate H2 database at `/tmp/offbyone-preview`. SQL works without Redis, Judge0, or Supabase credentials. Java execution still requires a Judge0 API key.
@@ -33,7 +35,23 @@ Tests cover SQL typing, NULLs, duplicates, ordering, overflow, execution budgets
 
 Keep the existing managed PostgreSQL deployment for production. The new arena reuses the existing schema: `rooms.track` is `sql-arena`, `end_time` is the current round/intermission deadline, and `intermission` is an additional room status. No schema migration is required. The preview profile is local development only.
 
-Set `VITE_API_URL` to your deployed backend when building the frontend. Keep database, JWT, and Java judge credentials on the backend. Existing Render files remain available; this change does not deploy or push automatically.
+Use the repository-root `render.yaml` for Render (the obsolete backend-only blueprint has been removed). It defines a Docker backend rooted at `backend` and a static frontend rooted at `frontend`. For existing services, apply these settings in their dashboard as well: backend health check `/health`; frontend build `npm ci && npm run build`, publish directory `dist`, and rewrite `/*` to `/index.html`.
+
+Backend environment:
+
+- `SUPABASE_DB_PASSWORD`: the password for the existing managed PostgreSQL database.
+- `JWT_SECRET`: a private random secret of at least 32 bytes. Keep the same value across deployments so existing unexpired sessions remain valid.
+- `JUDGE0_API_KEY` and `REDIS_PASSWORD`: needed for the existing Java execution/rate-limit integrations; SQL does not require them.
+- If using a different PostgreSQL database, set `SPRING_DATASOURCE_URL` to its JDBC URL (with `sslmode=require`) and `SPRING_DATASOURCE_USERNAME` to its username. `SPRING_DATASOURCE_PASSWORD` can override the password directly. The defaults point to the original Supabase project.
+- Leave `SPRING_PROFILES_ACTIVE` unset. Render startup rejects `preview` and `local`, which use development storage. The backend binds to `0.0.0.0` and Render's `PORT` automatically.
+
+Frontend environment: set `VITE_API_URL` to the backend's public HTTPS origin, for example `https://your-backend.onrender.com` (no `/api`). Rebuild the static site after changing it: the URL is compiled into the bundle. Render builds now reject a missing, local, or malformed URL.
+
+For a **new, empty** database, initialize it with `backend/db/init/001_schema.sql` before deployment. Do not rerun this creation script on an existing database. Startup validates entity tables/columns and fails clearly if the schema is incompatible; it does not modify production data. `/health` returns 503 if PostgreSQL is unavailable. The Docker build runs backend tests before packaging.
+
+After deploying, verify `/health`, guest login, one SQL submission, and a duel in two browser sessions. Restart the backend and check the same unexpired session and match load again. Local checks do not verify your production credentials, PostgreSQL locking, or Render capacity. This change does not deploy or push automatically.
+
+Render's [free web services](https://render.com/docs/free) sleep after 15 idle minutes and can take about a minute to wake. Their local filesystem is temporary; keep player and match data in managed PostgreSQL. The SQLite databases used to judge individual queries are intentionally temporary.
 
 Arena transitions use a pessimistic database row lock, so competing requests cannot award two winners. The first correct submission admitted by that lock wins; network latency can affect admission order. Deadlines are checked on server requests. Clients poll every two seconds and recover authoritative state after reconnecting; timeouts progress when the match is next accessed. If both players disappear, there is no background tournament scheduler advancing every abandoned round.
 

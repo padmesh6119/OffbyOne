@@ -7,3 +7,4 @@ frontend/dist/
 *.md
 
 !README.md
+.local-run/

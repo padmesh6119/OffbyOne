@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 import ResultTable from '../components/SqlResultTable';
 import '../sql-arena.css';
@@ -19,6 +19,7 @@ function Status({ result }) {
 
 export default function SqlArena() {
   const [params, setParams] = useSearchParams();
+  const routeLocation = useLocation();
   const username = localStorage.getItem('username');
   const savedKey = `obo:match:${username}`;
   const [roomId, setRoomId] = useState(() => localStorage.getItem(savedKey));
@@ -42,6 +43,8 @@ export default function SqlArena() {
   const selectedRef = useRef(0);
   const problem = roomId ? match?.problem : practice;
   const draftKey = problem ? `obo:draft:${username}:${roomId || 'practice'}:${problem.slug}` : null;
+
+  useEffect(() => { if (!roomId) setPractice(null); }, [routeLocation.key]);
 
   useEffect(() => {
     let live = true;
@@ -105,10 +108,7 @@ export default function SqlArena() {
   const opponent = match?.players.find(p => p.username !== username);
   const visible = bank.filter(p => (filter === 'all' || p.difficulty === filter) && `${p.title} ${p.pattern}`.toLowerCase().includes(search.toLowerCase()));
 
-  return <div className="sql-app">
-    <aside className="arena-rail"><a href="#/sql" className="rail-mark" aria-label="SQL arena">o<span>1</span></a><span className="rail-line"/><button className="rail-active" aria-label="Arena home" onClick={() => { if (!roomId) setPractice(null); }}><Glyph/></button><a href="#/problems" aria-label="Java practice"><span className="rail-code">{'</>'}</span></a><a href="#/profile" aria-label="Profile"><span className="rail-avatar">{username?.[0]?.toUpperCase()}</span></a><span className="rail-bottom">SQL / 01</span></aside>
-    <main className="arena-main">
-      <header className="arena-top"><div className="arena-breadcrumb">OFFBYONE <span>/</span> <strong>SQL ARENA</strong></div><div className="arena-presence"><i/> {roomId ? 'FRIENDLY DUEL' : 'YOUR NEXT MOVE'}<span className="arena-user">{username}</span></div></header>
+  return <>
       {error && <div className="arena-error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       {roomId && !match && <section className="arena-loading"><span className="judge-spinner"/> Reconnecting to your match…<button className="arena-secondary" onClick={home}>Back to arena</button></section>}
       {!roomId && !practice && <>
@@ -128,8 +128,6 @@ export default function SqlArena() {
         {roomId && <button className="arena-text-link forfeit" disabled={!!busy} onClick={() => { if (window.confirm('Forfeit this match? Your opponent will win.')) action('Leaving', async () => updateMatch(await api.arenaAction(roomId, 'leave'))); }}>Forfeit match</button>}
       </>}
       {finished && <section className="arena-results"><div className="arena-eyebrow">MATCH COMPLETE / SQL ARENA</div><div className="result-emblem">{match.winner === username ? '★' : match.winner ? '↗' : '='}</div><h1>{match.winner === username ? 'Well queried.' : match.winner ? 'The next one is yours.' : 'Evenly matched.'}</h1><p>{match.winner ? `${match.winner} wins this duel.` : 'This match ends in a draw.'} There’s always another way to improve.</p><div className="result-score"><Player name={username} score={me?.score || 0}/><span>:</span><Player name={opponent?.username} score={opponent?.score || 0}/></div><div className="results-actions"><button className="arena-primary" disabled={!!busy} onClick={() => action('Rematching', async () => enter(await api.arenaAction(roomId, 'rematch')))}>Rematch ↗</button><button className="arena-secondary" onClick={home}>Back to arena</button></div><p className="rematch-note">Both players can press Rematch to meet in the same new lobby.</p><div className="match-review"><div className="section-heading"><h2>Leave with more than a score.</h2><span>THE MATCH REVIEW</span></div>{match.history.map(h => <details className="review-round" key={h.round}><summary><span>0{h.round}</span><strong>{h.title}</strong><small>{h.winner ? `${h.winner} won` : 'No round winner'} ↓</small></summary><p>{h.explanation}</p><pre>{h.solution}</pre></details>)}</div></section>}
-      <footer className="arena-footer"><span>OFFBYONE <b>SQL ARENA</b></span><span>Small margins. Better queries.</span><span>BUILT FOR THE NEXT ROUND ↗</span></footer>
-    </main>
-  </div>;
+  </>;
 }
 function Player({ name, score }) { return <div className={`arena-player ${!name ? 'waiting' : ''}`}><div className="player-monogram">{name?.[0]?.toUpperCase() || '?'}</div><div><strong>{name || 'Waiting for opponent'}</strong><div className="score-dots">{[0, 1].map(n => <i key={n} className={n < score ? 'won' : ''}/>)}</div></div><b>{score}</b></div>; }

@@ -28,7 +28,26 @@ with sync_playwright() as pw:
     page=a.new_page(); other=b.new_page(); errors=[]
     page.on('pageerror', lambda e:errors.append(str(e))); other.on('pageerror',lambda e:errors.append(str(e)))
     suffix=str(int(time.time()))[-8:]; name='Query_'+suffix; rival='Rival_'+suffix
-    page.goto(BASE+'/#/sql'); enter(page,name)
+    page.goto(BASE+'/#/'); page.get_by_label('Guest name').wait_for()
+    page.screenshot(path=str(OUT/'login-desktop.png'),full_page=True)
+    page.evaluate("localStorage.setItem('token', 'stale-session'); localStorage.setItem('username', 'old-guest')")
+    page.goto(BASE+'/#/sql?code=TESTCODE')
+    expect(page.get_by_role('status')).to_contain_text('Your saved session is no longer valid',timeout=15000)
+    assert page.evaluate("localStorage.getItem('token')") is None
+    enter(page,name)
+    expect(page.get_by_label('Invite code')).to_have_value('TESTCODE')
+    expect(page.get_by_role('navigation',name='Main navigation')).to_be_visible()
+    page.get_by_role('link',name='Java Practice').click()
+    expect(page.locator('.challenge-row')).to_have_count(29)
+    page.screenshot(path=str(OUT/'java-library-desktop.png'),full_page=True)
+    page.locator('.challenge-row').first.click()
+    expect(page.get_by_role('heading',name='Make every line count.')).to_be_visible()
+    expect(page.locator('.monaco-editor')).to_be_visible(timeout=30000)
+    page.screenshot(path=str(OUT/'java-editor-desktop.png'),full_page=True)
+    page.get_by_role('link',name='My Progress').click()
+    expect(page.locator('.progress-stats')).to_be_visible()
+    page.screenshot(path=str(OUT/'profile-desktop.png'),full_page=True)
+    page.get_by_role('link',name='SQL Arena').click()
     expect(page.locator('.challenge-row')).to_have_count(12)
     page.screenshot(path=str(OUT/'arena-desktop.png'),full_page=True)
     page.get_by_label('Search challenges').fill('second highest')
@@ -71,6 +90,6 @@ with sync_playwright() as pw:
     expect(page.get_by_role('button',name='Start the duel')).to_be_enabled(timeout=15000)
     assert state(page)['id']==state(other)['id'], 'Rematch rooms differ'
     assert not errors, errors
-    print('PASS: practice, hidden cases, anonymous invite, two-player duel, reload/draft recovery, results, rematch, desktop layout and focus mode, browser errors')
+    print('PASS: stale-session recovery with invite retained, practice, hidden cases, anonymous invite, two-player duel, reload/draft recovery, results, rematch, desktop layout and focus mode, browser errors')
     print('Screenshots:',OUT)
     browser.close()

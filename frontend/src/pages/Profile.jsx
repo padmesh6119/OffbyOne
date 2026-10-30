@@ -1,88 +1,16 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { api } from '../lib/api';
-import RatingSparkline from '../components/RatingSparkline';
-
+import { Link } from 'react-router-dom';
+import { api, errorMessage } from '../lib/api';
 export default function Profile() {
-  const username = localStorage.getItem('username');
-  const nav = useNavigate();
-  const [profile, setProfile] = useState(null);
-  const [rivals, setRivals] = useState([]);
-  const [streak, setStreak] = useState(null);
-  const [daily, setDaily] = useState(null);
-
-  useEffect(() => {
-    if (!username) return;
-    api.profile(username).then(setProfile).catch(() => {});
-    api.rivals(username).then(setRivals).catch(() => {});
-    api.streak().then(setStreak).catch(() => {});
-    api.dailyChallenge().then(setDaily).catch(() => {});
-  }, [username]);
-
-  if (!profile) return <div className="page"><p className="hint">Loading...</p></div>;
-
-  const totalMatches = profile.wins + profile.losses;
-  const winRate = totalMatches ? Math.round((profile.wins / totalMatches) * 100) : 0;
-
-  return (
-    <motion.div className="page profile-page" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.3 }}>
-      <h2>{profile.username}</h2>
-
-      <div className="profile-grid">
-        <div className="profile-card">
-          <span className="hint">Rating</span>
-          <span className="profile-stat">{profile.rating}</span>
-          <RatingSparkline history={profile.ratingHistory} />
-        </div>
-
-        <div className="profile-card">
-          <span className="hint">Record</span>
-          <span className="profile-stat">{profile.wins}–{profile.losses}</span>
-          <span className="hint">{totalMatches ? `${winRate}% win rate over ${totalMatches} matches` : 'No matches yet'}</span>
-        </div>
-
-        <div className="profile-card">
-          <span className="hint">Solved</span>
-          <div className="split-bar">
-            <div className="split-bar-java" style={{ flex: profile.solvedJava || 0.001 }} />
-            <div className="split-bar-sql" style={{ flex: profile.solvedSql || 0.001 }} />
-          </div>
-          <span className="hint">{profile.solvedJava} coding · {profile.solvedSql} SQL</span>
-        </div>
-
-        <div className="profile-card">
-          <span className="hint">Streak</span>
-          <span className="profile-stat">🔥 {streak?.currentStreak ?? 0}</span>
-          <span className="hint">
-            {streak?.solvedToday ? 'Solved today' : 'Not solved today'} · longest {streak?.longestStreak ?? 0}
-          </span>
-        </div>
-      </div>
-
-      {daily && (
-        <button className="daily-challenge-card" onClick={() => nav(`/problem/${daily.slug}`)}>
-          <span className="hint">Today's challenge</span>
-          <span className="profile-stat" style={{ fontSize: '1.2rem' }}>{daily.title}</span>
-          <span className={`diff-${daily.difficulty}`}>{daily.difficulty}</span>
-        </button>
-      )}
-
-      <h3>Rivals</h3>
-      {rivals.length === 0 ? (
-        <p className="hint">No head-to-head history yet — play someone more than once.</p>
-      ) : (
-        <table>
-          <thead><tr><th>Opponent</th><th>W</th><th>L</th><th>Matches</th></tr></thead>
-          <tbody>
-            {rivals.map((r) => (
-              <tr key={r.username}>
-                <td>{r.username}</td><td>{r.wins}</td><td>{r.losses}</td><td>{r.matches}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </motion.div>
-  );
+  const username=localStorage.getItem('username');
+  const [data,setData]=useState(null),[error,setError]=useState('');
+  useEffect(()=>{let live=true;Promise.all([api.profile(username),api.rivals(username),api.streak(),api.mySubmissions()]).then(([profile,rivals,streak,attempts])=>live&&setData({profile,rivals,streak,attempts})).catch(e=>live&&setError(errorMessage(e)));return()=>{live=false;};},[username]);
+  if(error)return <div className="arena-error" role="alert">{error}</div>;
+  if(!data)return <div className="arena-loading">Loading your progress…</div>;
+  const {profile:p,rivals,streak,attempts}=data;
+  const recent=[...attempts].sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt)).slice(0,8);
+  return <section className="workspace-page"><div className="page-intro"><div><div className="arena-eyebrow">YOUR PLAYER CARD</div><h1>Every attempt<br/><em>moves you forward.</em></h1><p>{username}, this is the work you have put in.</p></div><div className="profile-monogram">{username[0].toUpperCase()}<span>OFFBYONE / PLAYER</span></div></div>
+    <div className="progress-stats">{[[p.solvedSql,'SQL CHALLENGES SOLVED'],[p.solvedJava,'JAVA CHALLENGES SOLVED'],[p.wins+' – '+p.losses,'MATCH WINS / LOSSES'],[streak.currentStreak,'DAY STREAK']].map(([n,label])=><div key={label}><small>{label}</small><strong>{n}</strong></div>)}</div>
+    <div className="progress-columns"><section><div className="section-heading"><h2>Your recent attempts</h2><span className="arena-eyebrow">KEEP SHOWING UP</span></div>{recent.length?<div className="activity-list">{recent.map(a=><div className="activity-row" key={a.id}><span className={'activity-mark '+(a.verdict==='accepted'?'passed':'')}>{a.verdict==='accepted'?'✓':'↗'}</span><div><strong>{a.problemTitle}</strong><small>{a.language.toUpperCase()} · {new Date(a.submittedAt).toLocaleString()}</small></div><span className={a.verdict==='accepted'?'accepted-label':'attempt-label'}>{a.verdict.replaceAll('_',' ')}</span></div>)}</div>:<div className="workspace-empty"><strong>Your first attempt belongs here.</strong><p>Pick a challenge and make your first move.</p><Link className="arena-primary" to="/">Enter the arena ↗</Link></div>}</section><aside className="arena-playbook"><div className="arena-eyebrow">FAMILIAR COMPETITION</div><h3>Your rivals.</h3>{rivals.length?rivals.map(r=><div className="rival-row" key={r.username}><strong>{r.username}</strong><span>{r.wins} W · {r.losses} L</span></div>):<p className="workspace-copy">The best rivals make you better. Invite a friend and your match history will appear here.</p>}<div className="playbook-note">Longest streak: {streak.longestStreak} days<br/>{streak.solvedToday?'You have solved a challenge today.':'A fresh solve keeps your streak going.'}<br/>SQL arena matches are friendly and do not change Elo.</div><Link className="arena-secondary" to="/">Challenge a friend ↗</Link></aside></div>
+  </section>;
 }

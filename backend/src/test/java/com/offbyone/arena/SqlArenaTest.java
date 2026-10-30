@@ -10,7 +10,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
-@SpringBootTest(properties={"spring.datasource.url=jdbc:h2:mem:arena;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "app.jwt.secret=test-only-long-secret-key-for-sql-arena", "supabase.key=test", "spring.data.redis.password="})
+@SpringBootTest(properties={"RENDER=false", "spring.datasource.url=jdbc:h2:mem:arena;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "app.jwt.secret=test-only-long-secret-key-for-sql-arena", "supabase.key=test", "spring.data.redis.password="})
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class SqlArenaTest {
  @Autowired SqlArenaService arena; @Autowired UserRepository users; @Autowired RoomRepository rooms; @Autowired SqlProblemBank bank;
@@ -34,6 +34,16 @@ class SqlArenaTest {
    var m=arena.create(a);
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-arena/"+id(m)).header("Authorization","Bearer "+jwt.generate(outsider.getEmail())))
      .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isForbidden());
+ }
+ @Test void missingInvalidAndOrphanedSessionsRequireLogin() throws Exception {
+   var request = org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems");
+   http.perform(request).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+   for (String token : List.of("invalid-session", "", jwt.generate("deleted-account@test"))) {
+     http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems").header("Authorization", "Bearer " + token))
+       .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+   }
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems").header("Authorization", "Bearer " + jwt.generate(a.getEmail())))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
  }
  @Test void existingGuestCannotBeClaimed() throws Exception {
    String name="guest_"+UUID.randomUUID().toString().substring(0,8);

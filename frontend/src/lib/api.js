@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
 
 function headers() {
   const token = localStorage.getItem('token');
@@ -9,11 +9,13 @@ function headers() {
 }
 
 async function req(path, options = {}) {
-  const res = await fetch(BASE + path, { ...options, headers: headers() });
-  if (res.status === 401) {
+  const requestHeaders = headers();
+  const res = await fetch(BASE + path, { ...options, headers: requestHeaders });
+  if (res.status === 401 && requestHeaders.Authorization === headers().Authorization) {
+    const next = location.hash.slice(1) || '/';
     localStorage.removeItem('token');
     localStorage.removeItem('username');
-    location.href = '/#/join';
+    location.replace(`${location.pathname}#/join?expired=1&next=${encodeURIComponent(next)}`);
     throw new Error('Session expired, please rejoin.');
   }
   if (!res.ok) throw new Error(await res.text());

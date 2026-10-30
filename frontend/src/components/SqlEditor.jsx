@@ -6,9 +6,9 @@ import 'monaco-editor/esm/vs/basic-languages/java/java.contribution';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 self.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 loader.config({ monaco });
-export default function SqlEditor({ value, onChange, onRun, readOnly }) {
+export default function SqlEditor({ value, onChange, onRun, readOnly, language = 'sql' }) {
   const run = useRef(onRun); run.current = onRun;
-  return <Editor height="clamp(360px, 46vh, 640px)" language="sql" theme="vs-dark" value={value} onChange={onChange}
+  return <Editor height="clamp(360px, 46vh, 640px)" language={language} theme="vs-dark" value={value} onChange={onChange}
     onMount={editor => {
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => run.current?.(false));
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Enter, () => run.current?.(true));

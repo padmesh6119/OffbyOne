@@ -1,35 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from '../lib/api';
-
+import { api, errorMessage } from '../lib/api';
 export default function Problems() {
-  const [problems, setProblems] = useState([]);
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => {
-    api.problems(filter || null).then(setProblems);
-  }, [filter]);
-
-  return (
-    <div className="page">
-      <h2>Problems</h2>
-      <select value={filter} onChange={e => setFilter(e.target.value)}>
-        <option value="">All</option>
-        <option value="easy">Easy</option>
-        <option value="medium">Medium</option>
-        <option value="hard">Hard</option>
-      </select>
-      <table>
-        <thead><tr><th>Title</th><th>Difficulty</th></tr></thead>
-        <tbody>
-          {problems.map(p => (
-            <tr key={p.id}>
-              <td><Link to={`/problem/${p.slug}`}>{p.title}</Link></td>
-              <td className={`diff-${p.difficulty}`}>{p.difficulty}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
+  const [problems, setProblems] = useState([]), [solved, setSolved] = useState(new Set());
+  const [filter, setFilter] = useState('all'), [search, setSearch] = useState(''), [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  useEffect(() => { let live = true; Promise.all([api.problems(), api.mySubmissions()]).then(([p,s]) => { if(live){setProblems(p);setSolved(new Set(s.filter(x=>x.language==='java' && x.verdict==='accepted').map(x=>x.problemSlug)));} }).catch(e=>live && setError(errorMessage(e))).finally(()=>live && setLoading(false)); return ()=>{live=false;}; }, []);
+  const visible = problems.filter(p=>(filter==='all'||p.difficulty===filter) && p.title.toLowerCase().includes(search.toLowerCase()));
+  return <section className="workspace-page"><div className="page-intro"><div><div className="arena-eyebrow">THE TRAINING GROUND / JAVA</div><h1>Build your<br/><em>problem-solving muscle.</em></h1><p>Small challenges. Careful thinking. One stronger solution at a time.</p></div><div className="intro-counter"><strong>{solved.size}<span>/{problems.length}</span></strong><small>CHALLENGES SOLVED</small></div></div>
+    {error && <div className="arena-error" role="alert">{error}</div>}
+    <div className="practice-layout"><div><div className="library-tools"><div className="difficulty-tabs">{['all','easy','medium','hard'].map(f=><button className={filter===f?'selected':''} key={f} onClick={()=>setFilter(f)}>{f==='all'?'All challenges':f}</button>)}</div><input aria-label="Search Java challenges" placeholder="Search challenges…" value={search} onChange={e=>setSearch(e.target.value)}/></div><div className="challenge-list">{visible.map((p,i)=><Link className="challenge-row" key={p.id} to={'/problem/'+p.slug}><span className={'challenge-number '+(solved.has(p.slug)?'solved':'')}>{solved.has(p.slug)?'✓':String(i+1).padStart(2,'0')}</span><span className="challenge-name"><strong>{p.title}</strong><small>Java · implementation</small></span><span className={'arena-difficulty '+p.difficulty}>{p.difficulty}</span><span className="challenge-arrow">↗</span></Link>)}{!visible.length && <p className="arena-no-results">{loading?'Loading challenges…':'No challenges match your search.'}</p>}</div></div><aside className="arena-playbook"><div className="arena-eyebrow">BUILD A HABIT</div><h3>Clarity first.<br/>Speed follows.</h3><p className="workspace-copy">Read the constraints. Work through the sample. Then make your solution handle the cases you cannot see.</p><div className="playbook-note">Your Java solutions are checked by the connected execution service.</div><Link className="arena-secondary" to="/">Switch to SQL duels ↗</Link></aside></div>
+  </section>;
 }

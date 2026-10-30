@@ -17,7 +17,14 @@ public class JwtUtil {
     private long expiryMs;
 
     private Key key() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        return Keys.hmacShaKeyFor(secret.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
+    @jakarta.annotation.PostConstruct
+    public void validateConfiguration() {
+        if (secret == null || secret.getBytes(java.nio.charset.StandardCharsets.UTF_8).length < 32)
+            throw new IllegalStateException("JWT_SECRET must contain at least 32 bytes and remain stable across deployments.");
+        key();
     }
 
     public String generate(String email) {
@@ -38,7 +45,7 @@ public class JwtUtil {
         try {
             Jwts.parserBuilder().setSigningKey(key()).build().parseClaimsJws(token);
             return true;
-        } catch (JwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
     }
