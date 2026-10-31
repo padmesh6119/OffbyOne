@@ -31,6 +31,17 @@ class SqlJudgeTest {
         var p=bank().findBySlug("sql-second-highest").orElseThrow();
         var v=judge.judge(p,"SELECT 88000");assertEquals("wrong_answer",v.status());assertNull(v.expectedRows());
     }
+    @Test void extraBeginnerDatasetsCheckBooleanRangesTextAndNulls() throws Exception {
+        var mistakes=Map.of(
+            "sql-chennai-passes", "SELECT name FROM students WHERE city = 'Chennai' OR score >= 50",
+            "sql-either-city", "SELECT name FROM students WHERE city = 'Chennai' AND city = 'Salem'",
+            "sql-score-range", "SELECT name, score FROM students WHERE score > 50 AND score < 80",
+            "sql-names-start-a", "SELECT name FROM students WHERE name GLOB 'A*'",
+            "sql-missing-phone", "SELECT name FROM contacts WHERE phone IS NULL OR phone = ''",
+            "sql-cheapest-price", "SELECT price FROM products ORDER BY price LIMIT 1");
+        for(var mistake:mistakes.entrySet()) assertEquals("wrong_answer",
+            judge.judge(bank().findBySlug(mistake.getKey()).orElseThrow(),mistake.getValue()).status(),mistake.getKey());
+    }
     @Test void incorrectCountFailsEmptyDepartment() throws Exception {
         var p=bank().findBySlug("sql-dept-headcount").orElseThrow();
         assertEquals("wrong_answer",judge.judge(p,"SELECT d.name,COUNT(*) FROM departments d LEFT JOIN employees e ON e.dept_id=d.id GROUP BY d.id,d.name ORDER BY d.name").status());

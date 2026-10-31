@@ -1227,5 +1227,374 @@
     ],
     "explanation": "Compare each amount to the average over all orders. Use a strict greater-than comparison.",
     "hint": "A scalar subquery can calculate the overall average for your WHERE comparison."
+  },
+  {
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (1,'Asha','Chennai',49),(2,'Ben','Salem',80),(3,'Chand','Chennai',50),(4,'Dia','Chennai',75)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "slug": "sql-chennai-passes",
+    "title": "Two Conditions",
+    "pattern": "where-and",
+    "difficulty": "easy",
+    "rating": 700,
+    "task": "Return the names of students who live in 'Chennai' AND have a score of at least 50. Both conditions must be true. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city = 'Chennai' AND score >= 50",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Chitra"
+        ]
+      ]
+    },
+    "hint": "Use AND between the city condition and the score condition.",
+    "explanation": "AND keeps a row only when both conditions are true. The >= comparison includes a score of exactly 50."
+  },
+  {
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "slug": "sql-either-city",
+    "title": "Either City Works",
+    "pattern": "where-or",
+    "difficulty": "easy",
+    "rating": 750,
+    "task": "Return the names of students who live in 'Chennai' OR 'Salem'. A student from either city qualifies. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city = 'Chennai' OR city = 'Salem'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Chitra"
+        ],
+        [
+          "Dev"
+        ]
+      ]
+    },
+    "hint": "Write a city comparison on each side of OR.",
+    "explanation": "OR keeps a row when at least one condition is true. Repeat the column in both comparisons: city = 'Chennai' OR city = 'Salem'."
+  },
+  {
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "slug": "sql-score-range",
+    "title": "Inside the Range",
+    "pattern": "between",
+    "difficulty": "easy",
+    "rating": 800,
+    "task": "Return the name and score of students scoring from 50 to 80 inclusive, in that column order. Include scores of exactly 50 and 80. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score FROM students WHERE score BETWEEN 50 AND 80",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "score"
+      ],
+      "rows": [
+        [
+          "Anu",
+          72
+        ],
+        [
+          "Dev",
+          50
+        ],
+        [
+          "Esha",
+          65
+        ]
+      ]
+    },
+    "hint": "BETWEEN includes both endpoints of a range.",
+    "explanation": "BETWEEN 50 AND 80 means score >= 50 AND score <= 80. Both boundary values qualify."
+  },
+  {
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "slug": "sql-city-list",
+    "title": "Choose from a List",
+    "pattern": "in",
+    "difficulty": "easy",
+    "rating": 850,
+    "task": "Return the names of students whose city is in this list: 'Chennai', 'Madurai'. Return only name. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city IN ('Chennai', 'Madurai')",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Bala"
+        ],
+        [
+          "Chitra"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "IN checks whether a value matches any item inside a parenthesized list.",
+    "explanation": "IN ('Chennai', 'Madurai') is a shorter way to write two equality conditions joined by OR."
+  },
+  {
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (1,'arun','Chennai',50),(2,'Bala','Salem',70),(3,'A','Pune',80),(4,'Meera','Madurai',60),(5,'Anya','Chennai',90)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "slug": "sql-names-start-a",
+    "title": "Starts with A",
+    "pattern": "like",
+    "difficulty": "easy",
+    "rating": 900,
+    "task": "Return the names of students whose name starts with A or a. Return only name. In SQLite, LIKE matches ASCII letters without regard to case by default. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE name LIKE 'A%'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ]
+      ]
+    },
+    "hint": "In a LIKE pattern, % means any number of characters after the starting letter.",
+    "explanation": "LIKE 'A%' matches A, Anu, and arun. The % comes after A because the name must start with that letter."
+  },
+  {
+    "schema": [
+      "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL, stock INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO products VALUES (1,'Notebook',60,12),(2,'Bottle',150,0),(3,'Pen',20,8),(4,'Bag',500,5),(5,'Pencil',10,0)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO products VALUES (9,'Zipper',99,0),(2,'Album',100,1),(7,'Crayon',101,3),(4,'Album',0,7)"
+      ],
+      [
+        "INSERT INTO products VALUES (22,'Ruler',100,0)"
+      ],
+      [
+        "INSERT INTO products VALUES (60,'Sticker',5,2),(20,'Cup',80,4),(40,'Folder',100,6),(10,'Eraser',15,0),(30,'Marker',120,9),(50,'Tape',40,1)"
+      ],
+      []
+    ],
+    "slug": "sql-cheapest-price",
+    "title": "The Lowest Price",
+    "pattern": "min",
+    "difficulty": "easy",
+    "rating": 950,
+    "task": "Return one number: the lowest price in products. Return the price only. If the table is empty, return one row containing NULL, the default result of MIN.",
+    "referenceQuery": "SELECT MIN(price) AS lowest FROM products",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "lowest"
+      ],
+      "rows": [
+        [
+          10
+        ]
+      ]
+    },
+    "hint": "MIN finds the smallest value in a column.",
+    "explanation": "MIN(price) returns the lowest price as a single value. For an empty table, it returns NULL."
+  },
+  {
+    "schema": [
+      "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL, stock INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO products VALUES (1,'Notebook',60,12),(2,'Bottle',150,0),(3,'Pen',20,8),(4,'Bag',500,5),(5,'Pencil',10,0)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO products VALUES (9,'Zipper',99,0),(2,'Album',100,1),(7,'Crayon',101,3),(4,'Album',0,7)"
+      ],
+      [
+        "INSERT INTO products VALUES (22,'Ruler',100,0)"
+      ],
+      [
+        "INSERT INTO products VALUES (60,'Sticker',5,2),(20,'Cup',80,4),(40,'Folder',100,6),(10,'Eraser',15,0),(30,'Marker',120,9),(50,'Tape',40,1)"
+      ],
+      []
+    ],
+    "slug": "sql-price-plus-ten",
+    "title": "Add Ten",
+    "pattern": "arithmetic",
+    "difficulty": "easy",
+    "rating": 1000,
+    "task": "Return each product name and its price plus 10, in that column order. Calculate the new price in your SELECT; do not change the table. Any row order is accepted.",
+    "referenceQuery": "SELECT name, price + 10 AS new_price FROM products",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "new_price"
+      ],
+      "rows": [
+        [
+          "Notebook",
+          70
+        ],
+        [
+          "Bottle",
+          160
+        ],
+        [
+          "Pen",
+          30
+        ],
+        [
+          "Bag",
+          510
+        ],
+        [
+          "Pencil",
+          20
+        ]
+      ]
+    },
+    "hint": "You can use + inside SELECT to calculate a value for every row.",
+    "explanation": "price + 10 calculates the new value without updating the stored data. AS new_price gives that result column a readable label."
+  },
+  {
+    "schema": [
+      "CREATE TABLE contacts (id INTEGER PRIMARY KEY, name TEXT NOT NULL, phone TEXT)"
+    ],
+    "seedData": [
+      "INSERT INTO contacts VALUES (1,'Anu','9000000001'),(2,'Bala',NULL),(3,'Chitra','9000000003'),(4,'Dev',NULL),(5,'Esha','')"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO contacts VALUES (5,'Same',NULL),(2,'Same',''),(9,'Neha','9000000009'),(4,'Lal',NULL)"
+      ],
+      [
+        "INSERT INTO contacts VALUES (15,'Solo','')"
+      ],
+      [
+        "INSERT INTO contacts VALUES (10,'New',NULL),(20,'Other','123'),(30,'Third',NULL)"
+      ],
+      []
+    ],
+    "slug": "sql-missing-phone",
+    "title": "Missing Phone Numbers",
+    "pattern": "is-null",
+    "difficulty": "easy",
+    "rating": 1050,
+    "task": "Return the names of contacts whose phone is NULL (missing). An empty string is not NULL and must be excluded. Return only name. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM contacts WHERE phone IS NULL",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Bala"
+        ],
+        [
+          "Dev"
+        ]
+      ]
+    },
+    "hint": "Use IS NULL to check for a missing value. Equality with NULL does not work like equality with a number.",
+    "explanation": "WHERE phone IS NULL selects missing phone values. A blank string is still a stored value, so it is excluded."
   }
 ]

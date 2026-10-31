@@ -15,7 +15,7 @@ export default function Join() {
     event.preventDefault(); setBusy(true); setError('');
     try {
       const session = await api.join(name.trim(), skillLevel);
-      Object.keys(localStorage).filter(k => k.startsWith(`obo:draft:${session.username}:`) || k === `obo:match:${session.username}`).forEach(k => localStorage.removeItem(k));
+      Object.keys(localStorage).filter(k => k.startsWith(`obo:draft:${session.username}:`) || k === `obo:match:${session.username}` || k === `obo:bookmarks:${session.username}`).forEach(k => localStorage.removeItem(k));
       localStorage.setItem('token', session.token); localStorage.setItem('username', session.username); localStorage.setItem('skillLevel', session.skillLevel); localStorage.setItem('expiresAt', session.expiresAt);
       navigate(destination, { replace: true });
     } catch (e) { setError(errorMessage(e)); setBusy(false); }
