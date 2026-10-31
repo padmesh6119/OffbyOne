@@ -17,6 +17,7 @@ class SqlArenaTest {
  @Autowired org.springframework.test.web.servlet.MockMvc http;
  @Autowired com.offbyone.config.JwtUtil jwt;
  @Autowired SubmissionRepository submissions;
+ @Autowired RoomProblemRepository assignments;
  User a,b,outsider;
  @BeforeEach void setup(){a=user();b=user();outsider=user();}
  User user(){var u=new User();u.setUsername(UUID.randomUUID().toString());u.setEmail(u.getUsername()+"@test");u.setPasswordHash("unused");return users.save(u);}
@@ -28,10 +29,19 @@ class SqlArenaTest {
    a.setSkillLevel(1);users.save(a);b.setSkillLevel(3);users.save(b);
    var m=match();assertEquals(2,m.get("skillLevel"));
    assertEquals("easy",((Map<?,?>)m.get("problem")).get("difficulty"));
+   assertRoundDifficulty(id(m),"easy");
+   assertEquals(m.get("problem"),arena.state(id(m),b).get("problem"));
    assertThrows(ResponseStatusException.class,()->arena.skill(id(m),a,10));
    var high=arena.create(a);arena.skill(id(high),a,10);arena.join((String)high.get("code"),b);arena.skill(id(high),b,10);
    var started=arena.start(id(high),a);assertEquals(10,started.get("skillLevel"));
    assertEquals("hard",((Map<?,?>)started.get("problem")).get("difficulty"));
+   assertRoundDifficulty(id(high),"hard");
+ }
+ void assertRoundDifficulty(UUID roomId,String difficulty){
+   var rounds=assignments.findByRoomIdOrderBySortOrderAsc(roomId);
+   assertEquals(3,rounds.size());
+   assertEquals(3,rounds.stream().map(RoomProblem::getSqlSlug).distinct().count());
+   for(var round:rounds) assertEquals(difficulty,bank.findBySlug(round.getSqlSlug()).orElseThrow().difficulty());
  }
  @Test void expiredGuestNameIsReusableWithoutTakingOverHistory() throws Exception {
    a.setUsername("reuse_"+UUID.randomUUID().toString().substring(0,8));
@@ -79,14 +89,25 @@ class SqlArenaTest {
  }
  @Test void practicePersistsOnlySubmissionsAndRejectsNullInput() throws Exception {
    var auth="Bearer "+jwt.generate(a.getEmail());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems/sql-student-names").header("Authorization",auth))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.hint").isNotEmpty())
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.expected.rows[0][0]").value("Anu"))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.referenceQuery").doesNotExist())
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.hiddenDatasets").doesNotExist());
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/sql-problems/sql-second-highest/run").header("Authorization",auth).contentType("application/json").content("{\"query\":\"SELECT 88000\"}"))
      .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
    assertTrue(submissions.findByUserId(a.getId()).isEmpty());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/sql-problems/sql-second-highest/submit").header("Authorization",auth).contentType("application/json").content("{\"query\":\"SELECT 88000\"}"))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.verdict").value("wrong_answer"))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.review").doesNotExist());
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/sql-problems/sql-second-highest/submit").header("Authorization",auth).contentType("application/json").content("{\"query\":null}"))
      .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/sql-problems/sql-second-highest/submit").header("Authorization",auth).contentType("application/json").content("{\"query\":\"SELECT DISTINCT salary FROM employees ORDER BY salary DESC LIMIT 1 OFFSET 1\"}"))
-     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
-   assertEquals("accepted",submissions.findByUserId(a.getId()).get(0).getVerdict());
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.review.solution").value(bank.findBySlug("sql-second-highest").orElseThrow().referenceQuery()))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.review.explanation").isNotEmpty());
+   assertTrue(submissions.findByUserId(a.getId()).stream().anyMatch(s -> "accepted".equals(s.getVerdict())));
  }
 
 }

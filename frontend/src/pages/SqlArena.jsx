@@ -3,6 +3,7 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 import ResultTable from '../components/SqlResultTable';
 import ArenaVisual from '../components/ArenaVisual';
+import PracticeGuide from '../components/PracticeGuide';
 
 const SqlEditor = lazy(() => import('../components/SqlEditor'));
 const fmt = s => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -29,6 +30,7 @@ export default function SqlArena() {
   const [code, setCode] = useState(params.get('code') || '');
   const [query, setQuery] = useState(starter);
   const [result, setResult] = useState(null);
+  const [practiceReview, setPracticeReview] = useState(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -72,6 +74,7 @@ export default function SqlArena() {
   useEffect(() => {
     if (draftKey) setQuery(localStorage.getItem(draftKey) ?? starter);
     setResult(null);
+    setPracticeReview(null);
   }, [draftKey]);
   function edit(value) { const text = value ?? ''; setQuery(text); if (draftKey) localStorage.setItem(draftKey, text); }
   function enter(m) { generation.current++; selectedRef.current++; setPractice(null); setRoomId(m.id); localStorage.setItem(savedKey, m.id); updateMatch(m); setParams({}); }
@@ -93,7 +96,10 @@ export default function SqlArena() {
       else {
         const r = await api.sqlSubmit(problem.slug, query);
         setResult({ status: r.verdict, message: r.message, actualColumns: r.actual?.columns, actualRows: r.actual?.rows, expectedColumns: r.expected?.columns, expectedRows: r.expected?.rows });
-        if (r.verdict === 'accepted') setSolved(previous => new Set([...previous, problem.slug]));
+        if (r.verdict === 'accepted') {
+          setSolved(previous => new Set([...previous, problem.slug]));
+          setPracticeReview(r.review || null);
+        }
       }
     });
   }
@@ -108,6 +114,7 @@ export default function SqlArena() {
   const me = match?.players.find(p => p.username === username);
   const opponent = match?.players.find(p => p.username !== username);
   const visible = bank.filter(p => (filter === 'all' || p.difficulty === filter) && `${p.title} ${p.pattern}`.toLowerCase().includes(search.toLowerCase()));
+  const nextUnsolved = bank.find(p => !solved.has(p.slug) && p.slug !== problem?.slug);
 
   return <>
       {error && <div className="arena-error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
@@ -126,6 +133,7 @@ export default function SqlArena() {
         {match?.status === 'intermission' && <div className="round-banner" role="status"><strong>{match.history.find(h => h.round === match.round)?.winner ? `${match.history.find(h => h.round === match.round).winner} takes the round.` : 'Time is up. This round is a draw.'}</strong><span>Next challenge in {seconds}s</span></div>}
         <section className={`arena-workspace ${focusEditor ? 'focus-editor' : ''}`}><div className="challenge-panel"><div className="panel-title"><span><Glyph type="db"/> THE CHALLENGE</span><span className={`arena-difficulty ${problem.difficulty}`}>{problem.difficulty}</span></div><div className="challenge-description"><span className="arena-eyebrow">{problem.pattern?.replaceAll('+', ' + ')}</span><h2>{problem.title}</h2><p>{problem.task}</p><div className="query-rules">Return columns in the requested order. Column aliases are flexible.</div></div><div className="schema-heading">EXPLORE THE DATA <span>PUBLIC SAMPLE</span></div>{problem.tables?.map(t => <details className="schema-card" key={t.name} open><summary><Glyph type="db"/> {t.name}<span>{t.columns.length} columns</span></summary><ResultTable columns={t.columns} rows={t.rows}/></details>)}<details className="schema-ddl"><summary>View table definitions</summary><pre>{problem.schema.join(';\n\n')};</pre></details></div>
         <div className="query-panel"><div className="panel-title"><span><span className="file-dot"/> solution.sql</span><button className="editor-focus" onClick={() => setFocusEditor(!focusEditor)}>{focusEditor ? '↙ Show schema' : '↗ Focus editor'}</button><span className="editor-language">SQLite <i/></span></div><div className="editor-wrap"><Suspense fallback={<div className="arena-loading">Loading editor…</div>}><SqlEditor value={query} onChange={edit} onRun={submit => runRef.current?.(submit)} readOnly={!!busy || (!!roomId && !active)}/></Suspense></div><div className="editor-actions"><span>Ctrl + Enter · Run / + Shift · Submit</span><button className="arena-secondary" disabled={!!busy || !query.trim() || (roomId && !active)} onClick={() => execute(false)}>{busy === 'Running' ? 'Running…' : '▷ Run sample'}</button><button className="arena-primary" disabled={!!busy || !query.trim() || (roomId && !active)} onClick={() => execute(true)}>{busy === 'Judging' ? 'Judging…' : 'Submit query →'}</button></div><div className="output-panel"><div className="panel-title"><span>QUERY OUTPUT</span><span>{busy === 'Judging' ? 'CHECKING DATASETS' : 'RESULTS'}</span></div><Status result={result}/></div>{roomId && match.myAttempts.length > 0 && <div className="attempt-strip">YOUR RECENT SUBMISSIONS {match.myAttempts.map((a, i) => <span key={i} className={a.verdict === 'accepted' ? 'ok' : ''}>{human(a.verdict)}</span>)}</div>}</div></section>
+        {!roomId && <PracticeGuide key={problem.slug} problem={problem} review={practiceReview} busy={!!busy} hasNext={!!nextUnsolved} onNext={() => { if (nextUnsolved) { openPractice(nextUnsolved); window.scrollTo({top: 0, behavior: 'smooth'}); } }}/>}
         {roomId && <button className="arena-text-link forfeit" disabled={!!busy} onClick={() => { if (window.confirm('Forfeit this match? Your opponent will win.')) action('Leaving', async () => updateMatch(await api.arenaAction(roomId, 'leave'))); }}>Forfeit match</button>}
       </>}
       {finished && <section className="arena-results"><div className="arena-eyebrow">MATCH COMPLETE / SQL ARENA</div><div className="result-emblem">{match.winner === username ? '★' : match.winner ? '↗' : '='}</div><h1>{match.winner === username ? 'Well queried.' : match.winner ? 'The next one is yours.' : 'Evenly matched.'}</h1><p>{match.winner ? `${match.winner} wins this duel.` : 'This match ends in a draw.'} There’s always another way to improve.</p><div className="result-score"><Player name={username} score={me?.score || 0}/><span>:</span><Player name={opponent?.username} score={opponent?.score || 0}/></div><div className="results-actions"><button className="arena-primary" disabled={!!busy} onClick={() => action('Rematching', async () => enter(await api.arenaAction(roomId, 'rematch')))}>Rematch ↗</button><button className="arena-secondary" onClick={home}>Back to arena</button></div><p className="rematch-note">Both players can press Rematch to meet in the same new lobby.</p><div className="match-review"><div className="section-heading"><h2>Leave with more than a score.</h2><span>THE MATCH REVIEW</span></div>{match.history.map(h => <details className="review-round" key={h.round}><summary><span>0{h.round}</span><strong>{h.title}</strong><small>{h.winner ? `${h.winner} won` : 'No round winner'} ↓</small></summary><p>{h.explanation}</p><pre>{h.solution}</pre></details>)}</div></section>}

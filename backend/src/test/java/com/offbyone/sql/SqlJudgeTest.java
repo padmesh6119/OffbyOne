@@ -7,7 +7,25 @@ class SqlJudgeTest {
     final SqlJudge judge=new SqlJudge();
     SqlProblemBank bank() throws Exception {return new SqlProblemBank(new ObjectMapper());}
     @Test void everyReferencePassesAllHiddenDatasets() throws Exception {
-        for(SqlProblem p:bank().findAll()) assertEquals("accepted",judge.judge(p,p.referenceQuery()).status(),p.slug());
+        for(SqlProblem p:bank().findAll()) {
+            var verdict=judge.judge(p,p.referenceQuery());
+            assertEquals("accepted",verdict.status(),p.slug());
+            assertTrue(SqlJudge.compare(new SqlJudge.Table(p.expected().columns(),p.expected().rows()),
+                    new SqlJudge.Table(verdict.actualColumns(),verdict.actualRows()),p.ordered()),p.slug()+" sample fixture");
+        }
+    }
+    @Test void beginnerDatasetsCatchBoundariesDuplicatesAndShortTables() throws Exception {
+        var mistakes=Map.of(
+            "sql-passing-scores", "SELECT name, score FROM students WHERE score > 50",
+            "sql-affordable-products", "SELECT name, price FROM products WHERE price <= 100",
+            "sql-unique-cities", "SELECT city FROM students",
+            "sql-first-three-students", "SELECT id, name FROM students WHERE id <= 3 ORDER BY id",
+            "sql-count-students", "SELECT COUNT(DISTINCT name) FROM students",
+            "sql-total-stock", "SELECT COUNT(*) FROM products",
+            "sql-highest-score", "SELECT score FROM students ORDER BY score DESC LIMIT 1");
+        for(var mistake:mistakes.entrySet()) {
+            assertEquals("wrong_answer",judge.judge(bank().findBySlug(mistake.getKey()).orElseThrow(),mistake.getValue()).status(),mistake.getKey());
+        }
     }
     @Test void hardcodedSampleCannotPassHiddenTests() throws Exception {
         var p=bank().findBySlug("sql-second-highest").orElseThrow();

@@ -5,7 +5,7 @@ import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 export default function Join() {
   const [name, setName] = useState(''), [error, setError] = useState(''), [busy, setBusy] = useState(false);
-  const [skillLevel, setSkillLevel] = useState(5);
+  const [skillLevel, setSkillLevel] = useState(1);
   const navigate = useNavigate(), location = useLocation();
   const params = new URLSearchParams(location.search);
   const requested = location.state?.from || params.get('next') || '/';

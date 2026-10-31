@@ -2,7 +2,7 @@
 
 SQL-only guest arena: choose a name and a self-rated skill from 1–10. Guest passes last 24 hours; expired names are released automatically and can be reused by a new guest. Historical records stay attached to the original guest ID, so reusing a name never grants access to someone else's history. There is no password or account login.
 
-Private duels use the rounded average of both players' levels. Levels 1–3 prefer easy questions, 4–7 medium, and 8–10 hard. Three unique questions are chosen closest to that difficulty; the current bank has two hard problems, so an advanced match also includes one medium problem. Both players face identical questions. Levels can be adjusted in the lobby and lock when a match starts. This is self-rated difficulty matching for invite duels, not an automatic public matchmaking queue or ranked rating system.
+Private duels use the rounded average of both players' levels. New guest passes default to level 1. Levels 1–3 select easy questions, 4–7 medium, and 8–10 hard. Each tier has enough questions for three unique challenges at the selected difficulty. Both players face identical questions. Levels can be adjusted in the lobby and lock when a match starts. This is self-rated difficulty matching for invite duels, not an automatic public matchmaking queue or ranked rating system.
 
 Light and dark themes are available on entry and in the workspace, persist in the browser, and include the SQL editor. Java routes and navigation are removed for now; the older backend and records remain for future work.
 
@@ -12,7 +12,7 @@ The SQL editor supports a full-width focus mode, Ctrl/Cmd+Enter to run samples, 
 
 The SQL arena includes private invite links, best-of-three friendly duels, five-minute rounds, server-owned scores, browser draft recovery, shared rematch lobbies, and post-match explanations. Two wins end a match early. A timeout draws that round; after three rounds the higher score wins, or the match is drawn. Leaving forfeits the match. Friendly arena matches do not change Elo.
 
-All 12 SQL challenges now have a public dataset and four additional datasets (duplicates/ties, sparse data, changed values, and empty tables). Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
+The bank contains 24 SQL challenges: 12 beginner-friendly easy questions, 8 medium, and 4 hard. Easy questions use one table and cover SELECT, WHERE, ORDER BY, DISTINCT, LIMIT, COUNT, SUM, and MAX; they require no joins, subqueries, or window functions. The original 12 questions are now medium or hard. Each challenge has a public dataset and four additional datasets covering changed values, boundaries or duplicates, sparse data, and empty tables. Practice includes a per-question hint, expected public sample output, and a SQL quick reference. An accepted practice submission unlocks an explained reference solution and a Next unsolved challenge button; these learning panels are absent during duels. Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
 
 ## Local preview without cloud credentials
 

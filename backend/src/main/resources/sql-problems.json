@@ -1,9 +1,580 @@
 [
   {
+    "slug": "sql-student-names",
+    "title": "Your First SELECT",
+    "difficulty": "easy",
+    "rating": 100,
+    "pattern": "select",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the name of every student from the students table. Return just the name column. Any row order is accepted; keep repeated names.",
+    "referenceQuery": "SELECT name FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Bala"
+        ],
+        [
+          "Chitra"
+        ],
+        [
+          "Dev"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "explanation": "SELECT chooses the column you want to see. FROM names the table. SELECT name FROM students returns one name for each student.",
+    "hint": "Choose just the name column. You do not need a filter."
+  },
+  {
+    "slug": "sql-student-cities",
+    "title": "Pick Two Columns",
+    "difficulty": "easy",
+    "rating": 150,
+    "pattern": "select-columns",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return every student’s name and city from students, in that column order. Any row order is accepted.",
+    "referenceQuery": "SELECT name, city FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "city"
+      ],
+      "rows": [
+        [
+          "Anu",
+          "Chennai"
+        ],
+        [
+          "Bala",
+          "Madurai"
+        ],
+        [
+          "Chitra",
+          "Chennai"
+        ],
+        [
+          "Dev",
+          "Salem"
+        ],
+        [
+          "Esha",
+          "Madurai"
+        ]
+      ]
+    },
+    "explanation": "Separate column names with a comma: SELECT name, city. You do not need to return id or score.",
+    "hint": "Put the two requested column names after SELECT, separated by a comma."
+  },
+  {
+    "slug": "sql-chennai-students",
+    "title": "Students in Chennai",
+    "difficulty": "easy",
+    "rating": 200,
+    "pattern": "where-equals",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return only the names of students whose city is 'Chennai'. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city = 'Chennai'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Chitra"
+        ]
+      ]
+    },
+    "explanation": "WHERE keeps rows that match a condition. Put text values such as 'Chennai' inside single quotes.",
+    "hint": "Filter the city column with WHERE. Text values need single quotes."
+  },
+  {
+    "slug": "sql-passing-scores",
+    "title": "Who Passed?",
+    "difficulty": "easy",
+    "rating": 250,
+    "pattern": "where-number",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "A student passes with a score of 50 or more. Return the name and score of every passing student, in that column order. A score of exactly 50 counts as a pass. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score FROM students WHERE score >= 50",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "score"
+      ],
+      "rows": [
+        [
+          "Anu",
+          72
+        ],
+        [
+          "Chitra",
+          90
+        ],
+        [
+          "Dev",
+          50
+        ],
+        [
+          "Esha",
+          65
+        ]
+      ]
+    },
+    "explanation": "Use >= to mean greater than or equal to. WHERE score >= 50 includes students scoring exactly 50.",
+    "hint": "Use a greater-than-or-equal comparison so a score of exactly 50 passes."
+  },
+  {
+    "slug": "sql-affordable-products",
+    "title": "Under 100",
+    "difficulty": "easy",
+    "rating": 300,
+    "pattern": "where-less-than",
+    "schema": [
+      "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL, stock INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO products VALUES (1,'Notebook',60,12),(2,'Bottle',150,0),(3,'Pen',20,8),(4,'Bag',500,5),(5,'Pencil',10,0)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO products VALUES (9,'Zipper',99,0),(2,'Album',100,1),(7,'Crayon',101,3),(4,'Album',0,7)"
+      ],
+      [
+        "INSERT INTO products VALUES (22,'Ruler',100,0)"
+      ],
+      [
+        "INSERT INTO products VALUES (60,'Sticker',5,2),(20,'Cup',80,4),(40,'Folder',100,6),(10,'Eraser',15,0),(30,'Marker',120,9),(50,'Tape',40,1)"
+      ],
+      []
+    ],
+    "task": "Return the name and price of products costing less than 100, in that column order. Products priced exactly 100 do not qualify. Any row order is accepted.",
+    "referenceQuery": "SELECT name, price FROM products WHERE price < 100",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "price"
+      ],
+      "rows": [
+        [
+          "Notebook",
+          60
+        ],
+        [
+          "Pen",
+          20
+        ],
+        [
+          "Pencil",
+          10
+        ]
+      ]
+    },
+    "explanation": "Use < for a strict less-than comparison. WHERE price < 100 excludes a price of exactly 100.",
+    "hint": "Use a strict less-than comparison on price."
+  },
+  {
+    "slug": "sql-in-stock",
+    "title": "Ready to Sell",
+    "difficulty": "easy",
+    "rating": 350,
+    "pattern": "where-greater-than",
+    "schema": [
+      "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL, stock INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO products VALUES (1,'Notebook',60,12),(2,'Bottle',150,0),(3,'Pen',20,8),(4,'Bag',500,5),(5,'Pencil',10,0)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO products VALUES (9,'Zipper',99,0),(2,'Album',100,1),(7,'Crayon',101,3),(4,'Album',0,7)"
+      ],
+      [
+        "INSERT INTO products VALUES (22,'Ruler',100,0)"
+      ],
+      [
+        "INSERT INTO products VALUES (60,'Sticker',5,2),(20,'Cup',80,4),(40,'Folder',100,6),(10,'Eraser',15,0),(30,'Marker',120,9),(50,'Tape',40,1)"
+      ],
+      []
+    ],
+    "task": "Return the names of products with stock greater than 0. Stock means the number of units available. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM products WHERE stock > 0",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Notebook"
+        ],
+        [
+          "Pen"
+        ],
+        [
+          "Bag"
+        ]
+      ]
+    },
+    "explanation": "WHERE stock > 0 keeps only products with at least one unit available.",
+    "hint": "Filter stock, not price. Zero units means the product is unavailable."
+  },
+  {
+    "slug": "sql-alphabetical-products",
+    "title": "A to Z",
+    "difficulty": "easy",
+    "rating": 400,
+    "pattern": "order-by",
+    "schema": [
+      "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL, stock INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO products VALUES (1,'Notebook',60,12),(2,'Bottle',150,0),(3,'Pen',20,8),(4,'Bag',500,5),(5,'Pencil',10,0)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO products VALUES (9,'Zipper',99,0),(2,'Album',100,1),(7,'Crayon',101,3),(4,'Album',0,7)"
+      ],
+      [
+        "INSERT INTO products VALUES (22,'Ruler',100,0)"
+      ],
+      [
+        "INSERT INTO products VALUES (60,'Sticker',5,2),(20,'Cup',80,4),(40,'Folder',100,6),(10,'Eraser',15,0),(30,'Marker',120,9),(50,'Tape',40,1)"
+      ],
+      []
+    ],
+    "task": "Return every product name sorted alphabetically from A to Z. Return only the name column and keep repeated names.",
+    "referenceQuery": "SELECT name FROM products ORDER BY name ASC",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Bag"
+        ],
+        [
+          "Bottle"
+        ],
+        [
+          "Notebook"
+        ],
+        [
+          "Pen"
+        ],
+        [
+          "Pencil"
+        ]
+      ]
+    },
+    "explanation": "ORDER BY name ASC sorts names in ascending order. ASC is the default, so ORDER BY name also works.",
+    "hint": "ORDER BY can sort a text column. Ascending order means A to Z."
+  },
+  {
+    "slug": "sql-unique-cities",
+    "title": "One of Each City",
+    "difficulty": "easy",
+    "rating": 450,
+    "pattern": "distinct",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the city column from students, showing each city only once. Any row order is accepted.",
+    "referenceQuery": "SELECT DISTINCT city FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "city"
+      ],
+      "rows": [
+        [
+          "Chennai"
+        ],
+        [
+          "Madurai"
+        ],
+        [
+          "Salem"
+        ]
+      ]
+    },
+    "explanation": "DISTINCT removes repeated values from the result. Several students can share a city, but it should appear only once here.",
+    "hint": "DISTINCT removes duplicate values from a selected column."
+  },
+  {
+    "slug": "sql-first-three-students",
+    "title": "Just Three Rows",
+    "difficulty": "easy",
+    "rating": 500,
+    "pattern": "limit",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the id and name of the first 3 students by smallest id, in that column order. Sort by id ascending. If fewer than 3 students exist, return all of them.",
+    "referenceQuery": "SELECT id, name FROM students ORDER BY id ASC LIMIT 3",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "id",
+        "name"
+      ],
+      "rows": [
+        [
+          1,
+          "Anu"
+        ],
+        [
+          2,
+          "Bala"
+        ],
+        [
+          3,
+          "Chitra"
+        ]
+      ]
+    },
+    "explanation": "ORDER BY id puts the smallest ids first. LIMIT 3 keeps at most three rows; it does not add rows to a smaller table.",
+    "hint": "Sort by id before limiting the number of returned rows. IDs may have gaps."
+  },
+  {
+    "slug": "sql-count-students",
+    "title": "How Many Students?",
+    "difficulty": "easy",
+    "rating": 550,
+    "pattern": "count",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return one number: the total number of students. Count every row, even if two students share a name. An empty table should return 0.",
+    "referenceQuery": "SELECT COUNT(*) AS total FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "total"
+      ],
+      "rows": [
+        [
+          5
+        ]
+      ]
+    },
+    "explanation": "COUNT(*) counts rows. It produces a single total, and returns 0 when there are no students.",
+    "hint": "COUNT(*) counts every row, including students who share a name."
+  },
+  {
+    "slug": "sql-total-stock",
+    "title": "Add Up the Stock",
+    "difficulty": "easy",
+    "rating": 600,
+    "pattern": "sum",
+    "schema": [
+      "CREATE TABLE products (id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL, stock INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO products VALUES (1,'Notebook',60,12),(2,'Bottle',150,0),(3,'Pen',20,8),(4,'Bag',500,5),(5,'Pencil',10,0)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO products VALUES (9,'Zipper',99,0),(2,'Album',100,1),(7,'Crayon',101,3),(4,'Album',0,7)"
+      ],
+      [
+        "INSERT INTO products VALUES (22,'Ruler',100,0)"
+      ],
+      [
+        "INSERT INTO products VALUES (60,'Sticker',5,2),(20,'Cup',80,4),(40,'Folder',100,6),(10,'Eraser',15,0),(30,'Marker',120,9),(50,'Tape',40,1)"
+      ],
+      []
+    ],
+    "task": "Return one number: the sum of the stock column across all products. Count units, not product rows. If the table is empty, return one row containing NULL, which is what SUM returns by default.",
+    "referenceQuery": "SELECT SUM(stock) AS total FROM products",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "total"
+      ],
+      "rows": [
+        [
+          25
+        ]
+      ]
+    },
+    "explanation": "SUM(stock) adds all the stock values together. The sample is 12 + 0 + 8 + 5 + 0 = 25. SUM returns NULL for an empty table.",
+    "hint": "Use SUM on the stock column. Counting rows counts products, not units."
+  },
+  {
+    "slug": "sql-highest-score",
+    "title": "The Highest Score",
+    "difficulty": "easy",
+    "rating": 650,
+    "pattern": "max",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return one number: the highest score in students. Return just the score, not a student name. If the table is empty, return one row containing NULL, which is what MAX returns by default.",
+    "referenceQuery": "SELECT MAX(score) AS highest FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "highest"
+      ],
+      "rows": [
+        [
+          90
+        ]
+      ]
+    },
+    "explanation": "MAX(score) finds the largest value in that column. It returns one value even if several students share the highest score, and NULL for an empty table.",
+    "hint": "MAX finds the largest value in a column without needing to sort."
+  },
+  {
     "slug": "sql-above-dept-avg",
     "title": "Above Department Average",
-    "difficulty": "medium",
-    "rating": 1400,
+    "difficulty": "hard",
+    "rating": 1600,
     "pattern": "aggregation+subquery",
     "schema": [
       "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
@@ -55,13 +626,14 @@
       ],
       []
     ],
-    "explanation": "Compute the average per department, then compare each employee against their own group. A company-wide average answers a different question."
+    "explanation": "Compute the average per department, then compare each employee against their own group. A company-wide average answers a different question.",
+    "hint": "Calculate a separate average for each department, then compare employees only to their own department."
   },
   {
     "slug": "sql-dept-headcount",
     "title": "Department Headcount",
-    "difficulty": "easy",
-    "rating": 900,
+    "difficulty": "medium",
+    "rating": 1100,
     "pattern": "group-by",
     "schema": [
       "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
@@ -111,7 +683,8 @@
       ],
       []
     ],
-    "explanation": "Start with departments and LEFT JOIN employees. COUNT(e.id) counts real employees; COUNT(*) counts the empty department row too."
+    "explanation": "Start with departments and LEFT JOIN employees. COUNT(e.id) counts real employees; COUNT(*) counts the empty department row too.",
+    "hint": "Start from departments and use a LEFT JOIN so empty departments stay in the result. Count employee IDs."
   },
   {
     "slug": "sql-top-earner-per-dept",
@@ -171,7 +744,8 @@
       ],
       []
     ],
-    "explanation": "Use a correlated MAX or RANK partitioned by department. Include every employee tied for the highest salary."
+    "explanation": "Use a correlated MAX or RANK partitioned by department. Include every employee tied for the highest salary.",
+    "hint": "Compare each salary with the maximum for its department. More than one employee can tie for first."
   },
   {
     "slug": "sql-second-highest",
@@ -217,13 +791,14 @@
       ],
       []
     ],
-    "explanation": "Remove duplicate salaries before finding the second value. Return no rows if fewer than two distinct salaries exist."
+    "explanation": "Remove duplicate salaries before finding the second value. Return no rows if fewer than two distinct salaries exist.",
+    "hint": "Remove duplicate salaries before skipping the largest one."
   },
   {
     "slug": "sql-no-employees",
     "title": "Empty Departments",
-    "difficulty": "easy",
-    "rating": 1000,
+    "difficulty": "medium",
+    "rating": 1200,
     "pattern": "anti-join",
     "schema": [
       "CREATE TABLE departments (id INTEGER PRIMARY KEY, name TEXT)",
@@ -263,13 +838,14 @@
       ],
       []
     ],
-    "explanation": "A LEFT JOIN with a NULL employee id, or NOT EXISTS, preserves departments with no employees."
+    "explanation": "A LEFT JOIN with a NULL employee id, or NOT EXISTS, preserves departments with no employees.",
+    "hint": "Use NOT EXISTS or a LEFT JOIN to find departments without a matching employee."
   },
   {
     "slug": "sql-customer-total",
     "title": "Customer Order Totals",
-    "difficulty": "easy",
-    "rating": 1000,
+    "difficulty": "medium",
+    "rating": 1200,
     "pattern": "join+group-by",
     "schema": [
       "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
@@ -323,13 +899,14 @@
       ],
       []
     ],
-    "explanation": "Join customers to orders, group by customer identity, and sum amounts. Different customers may share a name."
+    "explanation": "Join customers to orders, group by customer identity, and sum amounts. Different customers may share a name.",
+    "hint": "Join customers to orders and group by customer ID before summing. Names are not unique."
   },
   {
     "slug": "sql-never-ordered",
     "title": "Customers Without Orders",
-    "difficulty": "easy",
-    "rating": 950,
+    "difficulty": "medium",
+    "rating": 1150,
     "pattern": "anti-join",
     "schema": [
       "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
@@ -369,13 +946,14 @@
       ],
       []
     ],
-    "explanation": "NOT EXISTS handles unmatched customers even when an order has a NULL customer_id. NOT IN with NULL behaves differently."
+    "explanation": "NOT EXISTS handles unmatched customers even when an order has a NULL customer_id. NOT IN with NULL behaves differently.",
+    "hint": "Look for customers without a matching order. NOT EXISTS works even if an order has no customer ID."
   },
   {
     "slug": "sql-city-avg",
     "title": "Average Order Value By City",
-    "difficulty": "medium",
-    "rating": 1350,
+    "difficulty": "hard",
+    "rating": 1550,
     "pattern": "join+aggregate",
     "schema": [
       "CREATE TABLE customers (id INTEGER PRIMARY KEY, name TEXT, city TEXT)",
@@ -425,7 +1003,8 @@
       ],
       []
     ],
-    "explanation": "Average the order rows within each city, not the per-customer averages. Round only the final result."
+    "explanation": "Average the order rows within each city, not the per-customer averages. Round only the final result.",
+    "hint": "Average the individual order amounts within each city, then round the result."
   },
   {
     "slug": "sql-repeat-customers",
@@ -471,7 +1050,8 @@
       ],
       []
     ],
-    "explanation": "Group by customer identity and use HAVING COUNT(*) > 2. Customers with exactly two orders must be excluded."
+    "explanation": "Group by customer identity and use HAVING COUNT(*) > 2. Customers with exactly two orders must be excluded.",
+    "hint": "Count orders per customer and filter groups with HAVING."
   },
   {
     "slug": "sql-running-total",
@@ -531,7 +1111,8 @@
       ],
       []
     ],
-    "explanation": "Use SUM(amount) OVER with ROWS UNBOUNDED PRECEDING. Order by placed and id so same-day orders have a deterministic sequence."
+    "explanation": "Use SUM(amount) OVER with ROWS UNBOUNDED PRECEDING. Order by placed and id so same-day orders have a deterministic sequence.",
+    "hint": "Use a SUM window ordered by placed and id. A ROWS frame handles orders on the same date separately."
   },
   {
     "slug": "sql-month-revenue",
@@ -591,7 +1172,8 @@
       ],
       []
     ],
-    "explanation": "Group using both year and month. Grouping only by month number combines different years."
+    "explanation": "Group using both year and month. Grouping only by month number combines different years.",
+    "hint": "Group by both year and month together. SQLite substr can take the YYYY-MM part of a date."
   },
   {
     "slug": "sql-above-overall-avg",
@@ -643,6 +1225,7 @@
       ],
       []
     ],
-    "explanation": "Compare each amount to the average over all orders. Use a strict greater-than comparison."
+    "explanation": "Compare each amount to the average over all orders. Use a strict greater-than comparison.",
+    "hint": "A scalar subquery can calculate the overall average for your WHERE comparison."
   }
 ]

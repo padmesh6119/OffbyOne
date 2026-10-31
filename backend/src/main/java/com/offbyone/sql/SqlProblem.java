@@ -15,7 +15,8 @@ public record SqlProblem(
         boolean ordered,
         Expected expected,
         List<List<String>> hiddenDatasets,
-        String explanation
+        String explanation,
+        String hint
 ) {
     public record Expected(List<String> columns, List<List<Object>> rows) {}
 }

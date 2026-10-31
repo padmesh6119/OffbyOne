@@ -34,7 +34,8 @@ public class SqlProblemController {
         return bank.findBySlug(slug)
                 .map(p -> ResponseEntity.ok(Map.of("slug", p.slug(), "title", p.title(),
                         "difficulty", p.difficulty(), "rating", p.rating(), "pattern", p.pattern(),
-                        "schema", p.schema(), "task", p.task(), "tables", judge.previewTables(p))))
+                        "schema", p.schema(), "task", p.task(), "tables", judge.previewTables(p),
+                        "hint", p.hint(), "expected", p.expected())))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -60,6 +61,7 @@ public class SqlProblemController {
             Map<String, Object> result = new java.util.LinkedHashMap<>();
             result.put("verdict", v.status());
             result.put("message", v.message());
+            if ("accepted".equals(v.status())) result.put("review", Map.of("solution", p.referenceQuery(), "explanation", p.explanation()));
             if (v.actualColumns() != null) result.put("actual", Map.of("columns", v.actualColumns(), "rows", v.actualRows()));
             if (v.expectedColumns() != null) result.put("expected", Map.of("columns", v.expectedColumns(), "rows", v.expectedRows()));
             return ResponseEntity.ok(result);
