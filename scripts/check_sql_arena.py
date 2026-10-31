@@ -11,7 +11,7 @@ BANK = {p['slug']: p for p in json.loads((ROOT/'backend/src/main/resources/sql-p
 def enter(page, name):
     page.get_by_label('Guest name').fill(name)
     page.get_by_role('button', name='Enter', exact=True).click()
-    expect(page.get_by_role('heading', name='Enter the arena. Outquery everyone.')).to_be_visible(timeout=30000)
+    expect(page.get_by_role('heading', name='Good query. Great game.')).to_be_visible(timeout=30000)
 
 def write(page, sql):
     editor = page.locator('.monaco-editor textarea').first
@@ -30,7 +30,11 @@ with sync_playwright() as pw:
     page.on('pageerror', lambda e:errors.append(str(e))); other.on('pageerror',lambda e:errors.append(str(e)))
     suffix=str(int(time.time()))[-8:]; name='Query_'+suffix; rival='Rival_'+suffix
     page.goto(BASE+'/#/'); page.get_by_label('Guest name').wait_for()
+    page.evaluate('document.fonts.ready')
     page.screenshot(path=str(OUT/'login-desktop.png'),full_page=True)
+    page.get_by_role('button',name='Switch to light theme').click()
+    page.screenshot(path=str(OUT/'login-light.png'),full_page=True)
+    page.get_by_role('button',name='Switch to dark theme').click()
     page.evaluate("localStorage.setItem('token', 'stale-session'); localStorage.setItem('username', 'old-guest')")
     page.goto(BASE+'/#/sql?code=TESTCODE')
     expect(page.get_by_role('status')).to_contain_text('Your saved session is no longer valid',timeout=15000)
@@ -39,6 +43,7 @@ with sync_playwright() as pw:
     expect(page.get_by_label('Invite code')).to_have_value('TESTCODE')
     expect(page.get_by_role('navigation',name='Main navigation')).to_be_visible()
     expect(page.get_by_role('link',name='Java Practice')).to_have_count(0)
+    page.screenshot(path=str(OUT/'arena-dark.png'),full_page=True)
     page.get_by_role('button',name='Switch to light theme').click()
     expect(page.locator('html')).to_have_attribute('data-theme','light')
     page.screenshot(path=str(OUT/'arena-light.png'),full_page=True)
@@ -66,11 +71,12 @@ with sync_playwright() as pw:
     code=page.locator('.invite-code strong').inner_text()
     other.goto(BASE+'/#/sql?code='+code);enter(other,rival)
     expect(other.get_by_label('Invite code')).to_have_value(code)
-    other.get_by_role('button',name='Join operation').click()
+    other.get_by_role('button',name='Join duel').click()
     expect(page.locator('.match-skill')).to_contain_text('DUEL LEVEL 5/10')
     page.get_by_label('Duel skill level').fill('3')
     page.get_by_role('button',name='Save level').click()
     expect(page.locator('.match-skill')).to_contain_text('DUEL LEVEL 4/10')
+    page.screenshot(path=str(OUT/'lobby-desktop.png'),full_page=True)
     page.get_by_role('button',name='Start the duel').click(timeout=15000)
     expect(page.get_by_role('heading',name='Every query counts.')).to_be_visible()
     expect(other.get_by_role('heading',name='Every query counts.')).to_be_visible(timeout=15000)
