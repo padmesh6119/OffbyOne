@@ -1,6 +1,12 @@
 # OffbyOne — SQL Arena
 
-A desktop application for Java and SQL practice. The home page at `/#/` opens SQL Arena; `/#/sql` remains a compatible invite link. Login, the arena, Java practice and editor, and My Progress share one visual design and persistent navigation. The legacy room/tournament screens and duplicate SQL practice page have been removed from the frontend; their previous source remains recoverable in Git history.
+SQL-only guest arena: choose a name and a self-rated skill from 1–10. Guest passes last 24 hours; expired names are released automatically and can be reused by a new guest. Historical records stay attached to the original guest ID, so reusing a name never grants access to someone else's history. There is no password or account login.
+
+Private duels use the rounded average of both players' levels. Levels 1–3 prefer easy questions, 4–7 medium, and 8–10 hard. Three unique questions are chosen closest to that difficulty; the current bank has two hard problems, so an advanced match also includes one medium problem. Both players face identical questions. Levels can be adjusted in the lobby and lock when a match starts. This is self-rated difficulty matching for invite duels, not an automatic public matchmaking queue or ranked rating system.
+
+Light and dark themes are available on entry and in the workspace, persist in the browser, and include the SQL editor. Java routes and navigation are removed for now; the older backend and records remain for future work.
+
+The production startup applies `backend/src/main/resources/db/arena-upgrade.sql` before Hibernate validates the schema. The transactional, versioned upgrade widens legacy submission language/verdict checks while preserving earlier allowed values, and adds guest expiry and skill fields. An advisory lock serializes concurrent startup migrations. Repeated starts skip applied migrations. Production credentials must own these tables or have ALTER privileges.
 
 The SQL editor supports a full-width focus mode, Ctrl/Cmd+Enter to run samples, and Ctrl/Cmd+Shift+Enter to submit.
 
@@ -20,7 +26,7 @@ The preview runs on port 8087 and uses a separate H2 database at `/tmp/offbyone-
 From `frontend`, run `npm ci`, then `VITE_API_URL=http://127.0.0.1:8087 npm run dev -- --host 127.0.0.1 --port 5177`.
 Open `http://127.0.0.1:5177/#/sql`. Use a second browser profile or private window as the opponent.
 
-Guest names must be unique. A new login cannot claim an existing name. The signed guest session remains in its browser until it expires; there is no account recovery flow yet. Do not clear browser storage to resume a guest account.
+Guest names must be unique while their pass is active. A new pass cannot reclaim an active name. Keep browser storage to resume an unexpired pass.
 
 ## Verification
 
@@ -33,7 +39,7 @@ Tests cover SQL typing, NULLs, duplicates, ordering, overflow, execution budgets
 
 ## Deployment and limits
 
-Keep the existing managed PostgreSQL deployment for production. The new arena reuses the existing schema: `rooms.track` is `sql-arena`, `end_time` is the current round/intermission deadline, and `intermission` is an additional room status. No schema migration is required. The preview profile is local development only.
+Keep the existing managed PostgreSQL deployment for production. The new arena reuses the existing schema: `rooms.track` is `sql-arena`, `end_time` is the current round/intermission deadline, and `intermission` is an additional room status. The startup migration updates legacy constraints and adds guest/skill columns. The preview profile is local development only.
 
 Use the repository-root `render.yaml` for Render (the obsolete backend-only blueprint has been removed). It defines a Docker backend rooted at `backend` and a static frontend rooted at `frontend`. For existing services, apply these settings in their dashboard as well: backend health check `/health`; frontend build `npm ci && npm run build`, publish directory `dist`, and rewrite `/*` to `/index.html`.
 
@@ -47,7 +53,7 @@ Backend environment:
 
 Frontend environment: set `VITE_API_URL` to the backend's public HTTPS origin, for example `https://your-backend.onrender.com` (no `/api`). Rebuild the static site after changing it: the URL is compiled into the bundle. Render builds now reject a missing, local, or malformed URL.
 
-For a **new, empty** database, initialize it with `backend/db/init/001_schema.sql` before deployment. Do not rerun this creation script on an existing database. Startup validates entity tables/columns and fails clearly if the schema is incompatible; it does not modify production data. `/health` returns 503 if PostgreSQL is unavailable. The Docker build runs backend tests before packaging.
+For a **new, empty** database, initialize it with `backend/db/init/001_schema.sql` before deployment. Do not rerun this creation script on an existing database. Startup validates entity tables/columns and fails clearly if the schema is incompatible; the versioned startup migration applies the documented schema changes first. `/health` returns 503 if PostgreSQL is unavailable. The Docker build runs backend tests before packaging.
 
 After deploying, verify `/health`, guest login, one SQL submission, and a duel in two browser sessions. Restart the backend and check the same unexpired session and match load again. Local checks do not verify your production credentials, PostgreSQL locking, or Render capacity. This change does not deploy or push automatically.
 

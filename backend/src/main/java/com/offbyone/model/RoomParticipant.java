@@ -13,6 +13,9 @@ public class RoomParticipant {
     @Id
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id") private User user;
+    @Column(name = "skill_level", nullable = false) private int skillLevel = 5;
+    public int getSkillLevel() { return skillLevel; }
+    public void setSkillLevel(int value) { skillLevel = value; }
     private int score = 0;
     private Integer rank;
     @Column(name = "joined_at") private LocalDateTime joinedAt = LocalDateTime.now();

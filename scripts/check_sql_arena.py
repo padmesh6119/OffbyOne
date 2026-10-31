@@ -4,13 +4,14 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright, expect
 ROOT = Path(__file__).resolve().parents[1]
 OUT = Path(os.environ.get('ARENA_SCREENSHOTS', '/tmp/offbyone-screenshots')); OUT.mkdir(parents=True, exist_ok=True)
-BASE = 'http://127.0.0.1:5177'
+BASE = os.environ.get('ARENA_BASE', 'http://127.0.0.1:5177')
+API = os.environ.get('ARENA_API', 'http://127.0.0.1:8087')
 BANK = {p['slug']: p for p in json.loads((ROOT/'backend/src/main/resources/sql-problems.json').read_text())}
 
 def enter(page, name):
     page.get_by_label('Guest name').fill(name)
     page.get_by_role('button', name='Enter', exact=True).click()
-    expect(page.get_by_role('heading', name='Think fast. Query faster.')).to_be_visible(timeout=30000)
+    expect(page.get_by_role('heading', name='Enter the arena. Outquery everyone.')).to_be_visible(timeout=30000)
 
 def write(page, sql):
     editor = page.locator('.monaco-editor textarea').first
@@ -18,7 +19,7 @@ def write(page, sql):
     editor.focus(); page.keyboard.press('Control+a'); page.keyboard.insert_text(sql)
 
 def state(page):
-    return page.evaluate("""async () => {const user=localStorage.getItem('username'); const id=localStorage.getItem('obo:match:'+user);return (await fetch('http://127.0.0.1:8087/api/sql-arena/'+id,{headers:{Authorization:'Bearer '+localStorage.getItem('token')}})).json()}""")
+    return page.evaluate("""async (base) => {const user=localStorage.getItem('username'); const id=localStorage.getItem('obo:match:'+user);return (await fetch(base+'/api/sql-arena/'+id,{headers:{Authorization:'Bearer '+localStorage.getItem('token')}})).json()}""", API)
 
 with sync_playwright() as pw:
     chromium = os.environ.get('ARENA_CHROMIUM')
@@ -37,13 +38,12 @@ with sync_playwright() as pw:
     enter(page,name)
     expect(page.get_by_label('Invite code')).to_have_value('TESTCODE')
     expect(page.get_by_role('navigation',name='Main navigation')).to_be_visible()
-    page.get_by_role('link',name='Java Practice').click()
-    expect(page.locator('.challenge-row')).to_have_count(29)
-    page.screenshot(path=str(OUT/'java-library-desktop.png'),full_page=True)
-    page.locator('.challenge-row').first.click()
-    expect(page.get_by_role('heading',name='Make every line count.')).to_be_visible()
-    expect(page.locator('.monaco-editor')).to_be_visible(timeout=30000)
-    page.screenshot(path=str(OUT/'java-editor-desktop.png'),full_page=True)
+    expect(page.get_by_role('link',name='Java Practice')).to_have_count(0)
+    page.get_by_role('button',name='Switch to light theme').click()
+    expect(page.locator('html')).to_have_attribute('data-theme','light')
+    page.screenshot(path=str(OUT/'arena-light.png'),full_page=True)
+    page.reload()
+    expect(page.locator('html')).to_have_attribute('data-theme','light')
     page.get_by_role('link',name='My Progress').click()
     expect(page.locator('.progress-stats')).to_be_visible()
     page.screenshot(path=str(OUT/'profile-desktop.png'),full_page=True)
@@ -57,14 +57,20 @@ with sync_playwright() as pw:
     page.get_by_role('button',name='Submit query').click();expect(page.locator('.verdict-heading strong')).to_have_text('wrong answer')
     write(page,BANK['sql-second-highest']['referenceQuery'])
     page.get_by_role('button',name='Submit query').click();expect(page.locator('.verdict-heading strong')).to_have_text('accepted')
+    page.screenshot(path=str(OUT/'practice-light.png'),full_page=True)
+    page.get_by_role('button',name='Switch to dark theme').click()
     page.screenshot(path=str(OUT/'practice-desktop.png'),full_page=True)
     page.get_by_role('button',name='All challenges').click()
-    page.get_by_role('button',name='Create a duel').click()
+    page.get_by_role('button',name='Deploy a duel').click()
     expect(page.locator('.invite-code')).to_be_visible()
     code=page.locator('.invite-code strong').inner_text()
     other.goto(BASE+'/#/sql?code='+code);enter(other,rival)
     expect(other.get_by_label('Invite code')).to_have_value(code)
-    other.get_by_role('button',name='Join duel').click()
+    other.get_by_role('button',name='Join operation').click()
+    expect(page.locator('.match-skill')).to_contain_text('DUEL LEVEL 5/10')
+    page.get_by_label('Duel skill level').fill('3')
+    page.get_by_role('button',name='Save level').click()
+    expect(page.locator('.match-skill')).to_contain_text('DUEL LEVEL 4/10')
     page.get_by_role('button',name='Start the duel').click(timeout=15000)
     expect(page.get_by_role('heading',name='Every query counts.')).to_be_visible()
     expect(other.get_by_role('heading',name='Every query counts.')).to_be_visible(timeout=15000)

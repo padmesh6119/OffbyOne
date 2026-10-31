@@ -27,6 +27,8 @@ public class JwtUtil {
         key();
     }
 
+    public long expiryMs() { return expiryMs; }
+
     public String generate(String email) {
         return Jwts.builder()
                 .setSubject(email)

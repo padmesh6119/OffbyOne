@@ -28,7 +28,7 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = header.substring(7);
             if (jwtUtil.isValid(token)) {
                 String email = jwtUtil.extractEmail(token);
-                userRepository.findByEmail(email).ifPresent(user -> {
+                userRepository.findByEmail(email).filter(user -> !user.sessionExpired()).ifPresent(user -> {
                     var auth = new UsernamePasswordAuthenticationToken(user, null, List.of());
                     SecurityContextHolder.getContext().setAuthentication(auth);
                 });

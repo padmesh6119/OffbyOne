@@ -35,7 +35,7 @@ public class SqlArenaService {
     private void add(Room r,User u) {
         if(players.findByRoomIdAndUserId(r.getId(),u.getId()).isPresent()) return;
         if(!"waiting".equals(r.getStatus()) || roster(r).size()>=2) throw fail(HttpStatus.CONFLICT,"This match is full or already started.");
-        RoomParticipant p=new RoomParticipant();p.setRoom(r);p.setUser(u);players.save(p);
+        RoomParticipant p=new RoomParticipant();p.setRoom(r);p.setUser(u);p.setSkillLevel(u.getSkillLevel());players.save(p);
     }
     private List<RoomParticipant> roster(Room r) { return players.findByRoomIdOrderByScoreDescLastSolveAtAsc(r.getId()); }
     public Map<String,Object> create(User user) { return snapshot(createRoom(user,null),user); }
@@ -51,16 +51,24 @@ public class SqlArenaService {
         add(room,user);return snapshot(room,user);
     }
     public Map<String,Object> state(UUID id,User user) { Room r=locked(id,user);tick(r);return snapshot(r,user); }
+    public Map<String,Object> skill(UUID id, User user, int level) {
+        Room r = locked(id, user);
+        if (!"waiting".equals(r.getStatus())) throw fail(HttpStatus.CONFLICT, "Skill levels are locked once the match starts.");
+        if (level < 1 || level > 10) throw fail(HttpStatus.BAD_REQUEST, "Choose a level from 1 to 10.");
+        roster(r).stream().filter(p -> p.getUser().getId().equals(user.getId())).findFirst().orElseThrow().setSkillLevel(level);
+        return snapshot(r, user);
+    }
     public Map<String,Object> start(UUID id,User user) {
         Room r=locked(id,user);
         if(!r.getHost().getId().equals(user.getId())) throw fail(HttpStatus.FORBIDDEN,"Only the host can start.");
         if(!"waiting".equals(r.getStatus()) || roster(r).size()!=2) throw fail(HttpStatus.CONFLICT,"Two players must be in the lobby.");
         List<SqlProblem> pool=new ArrayList<>(bank.findAll());Collections.shuffle(pool);
-        // One easy warm-up, one medium challenge, one harder deciding round.
-        List<String> used=new ArrayList<>();
-        for(String difficulty:List.of("easy","medium","hard")) {
-            SqlProblem p=pool.stream().filter(x->difficulty.equals(x.difficulty()) && !used.contains(x.slug())).findFirst().orElseThrow();
-            RoomProblem rp=new RoomProblem();rp.setRoom(r);rp.setSqlSlug(p.slug());rp.setSortOrder(used.size());rp.setPoints(1);assignments.save(rp);used.add(p.slug());
+        int level = (int)Math.round(roster(r).stream().mapToInt(p -> p.getSkillLevel()).average().orElse(5));
+        String difficulty = level <= 3 ? "easy" : level <= 7 ? "medium" : "hard";
+        List<SqlProblem> selected = pool.stream().sorted(Comparator.comparingInt(p -> Math.abs(List.of("easy","medium","hard").indexOf(p.difficulty()) - List.of("easy","medium","hard").indexOf(difficulty)))).limit(3).toList();
+        if (selected.size() < 3) throw fail(HttpStatus.SERVICE_UNAVAILABLE,"Not enough challenges at this skill level.");
+        for(int round = 0; round < selected.size(); round++) {
+            RoomProblem rp=new RoomProblem();rp.setRoom(r);rp.setSqlSlug(selected.get(round).slug());rp.setSortOrder(round);rp.setPoints(1);assignments.save(rp);
         }
         r.setRoundsPlayed(1);r.setStartTime(now());activate(r);return snapshot(r,user);
     }
@@ -115,8 +123,8 @@ public class SqlArenaService {
         out.put("id",r.getId());out.put("code",r.getJoinCode());out.put("status",r.getStatus());out.put("round",r.getRoundsPlayed());
         out.put("serverTime",now().toInstant(ZoneOffset.UTC).toString());
         out.put("deadline",r.getEndTime()==null ? null : r.getEndTime().toInstant(ZoneOffset.UTC).toString());
-        out.put("host",r.getHost().getUsername());out.put("winner",r.getWinner()==null ? null : r.getWinner().getUsername());
-        out.put("players",roster(r).stream().map(p->Map.of("username",p.getUser().getUsername(),"score",p.getScore())).toList());
+        out.put("host",r.getHost().getDisplayName());out.put("winner",r.getWinner()==null ? null : r.getWinner().getDisplayName());
+        out.put("players",roster(r).stream().map(p->Map.of("username",p.getUser().getDisplayName(),"score",p.getScore(),"skillLevel",p.getSkillLevel())).toList());
         var attempts=submissions.findByRoomId(r.getId());
         List<Map<String,Object>> history=new ArrayList<>();
         for(RoomProblem rp:assignments.findByRoomIdOrderBySortOrderAsc(r.getId())) {
@@ -124,10 +132,11 @@ public class SqlArenaService {
             if(round>r.getRoundsPlayed()) continue;
             var p=bank.findBySlug(rp.getSqlSlug()).orElseThrow();
             Map<String,Object> h=new LinkedHashMap<>();h.put("round",round);h.put("title",p.title());
-            h.put("winner",attempts.stream().filter(s->p.slug().equals(s.getSqlSlug()) && "accepted".equals(s.getVerdict())).map(s->s.getUser().getUsername()).findFirst().orElse(null));
+            h.put("winner",attempts.stream().filter(s->p.slug().equals(s.getSqlSlug()) && "accepted".equals(s.getVerdict())).map(s->s.getUser().getDisplayName()).findFirst().orElse(null));
             if("finished".equals(r.getStatus())) {h.put("explanation",p.explanation());h.put("solution",p.referenceQuery());}
             history.add(h);
         }
+        out.put("skillLevel", (int)Math.round(roster(r).stream().mapToInt(p -> p.getSkillLevel()).average().orElse(5)));
         out.put("history",history);
         out.put("myAttempts",attempts.stream().filter(s->s.getUser().getId().equals(user.getId()) && Objects.equals(s.getSqlSlug(),r.getCurrentSqlSlug()))
             .sorted(Comparator.comparing(Submission::getSubmittedAt).reversed()).limit(5).map(s->Map.of("verdict",s.getVerdict(),"at",s.getSubmittedAt())).toList());

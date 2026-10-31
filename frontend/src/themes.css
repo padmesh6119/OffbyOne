@@ -1,0 +1,50 @@
+
+.theme-toggle{border:1px solid #53664b;background:#18251f;color:#e3f2cf;padding:9px 14px;border-radius:8px;cursor:pointer;font-size:12px!important;white-space:nowrap}
+.entry-form-panel>.theme-toggle{float:right;margin-top:-35px}
+.skill-scale{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:10px;color:var(--muted)}
+.skill-scale strong{color:var(--acid)}
+.entry-form-panel input[type=range]{accent-color:var(--acid);width:100%;padding:0;margin:12px 0;cursor:pointer}
+.match-skill{max-width:600px;margin:24px auto;padding:18px;border:1px solid var(--line);border-radius:10px;background:#16221d;color:var(--acid)}
+.match-skill strong{font:12px monospace}.match-skill p{margin:12px 0;color:var(--paper);font-size:13px}.match-skill small{font-size:11px;color:var(--muted);line-height:1.7}
+html[data-theme=light]{color-scheme:light;--color-bg:#f3f5ed;--color-text:#182d26;--color-text-muted:#4d665c}
+html[data-theme=light] body,html[data-theme=light] body:has(.sql-app){background:#f3f5ed}
+html[data-theme=light] .sql-app{--acid:#476c08;--paper:#182d26;--muted:#52695f;--line:#ccd6c7;background:radial-gradient(ellipse at top right,#e2efc5,transparent 50%),#f3f5ed;color:#182d26}
+html[data-theme=light] .workspace-sidebar{background:#e8eee0;border-color:#c9d3c3}
+html[data-theme=light] .workspace-main{background-image:radial-gradient(#546c501f .7px,transparent .7px)}
+html[data-theme=light] :is(.workspace-brand,.page-intro h1,.workspace-heading h2,.challenge-name strong,.activity-row strong,.arena-invite strong,.arena-playbook h3,.challenge-description h2){color:#182d26}
+html[data-theme=light] :is(.workspace-nav a,.workspace-nav a>span,.sidebar-note p,.sidebar-identity small,.arena-breadcrumb,.arena-presence,.arena-eyebrow,.hero-copy>p,.hero-facts,.entry-pitch p,.entry-form-panel>p,.entry-form-panel form>small,.entry-session-note p,.entry-session-note strong,.page-intro p,.workspace-copy,.challenge-description p,.playbook-step p,.playbook-note,.challenge-name small,.arena-empty,.arena-empty p,.query-rules,.schema-heading,.schema-ddl,.panel-title,.arena-footer,.activity-row small){color:#52695f}
+html[data-theme=light] .workspace-nav a.active{color:#294d00;background:#dcebbd;border-color:#b4ca89;box-shadow:inset 3px 0 #658f20}
+html[data-theme=light] :is(.workspace-nav a:hover,.challenge-row:hover:not(:disabled)){background:#e4edd9!important}
+html[data-theme=light] :is(.arena-invite,.arena-playbook,.challenge-panel,.query-panel,.arena-scoreboard,.progress-stats>div,.review-round,.workspace-empty,.match-skill){background:#fffef9;border-color:#c6d3c1;box-shadow:0 10px 30px #253a1510}
+html[data-theme=light] :is(.panel-title,.output-panel,.editor-actions,.activity-row,.rival-row,.arena-top,.arena-footer,.sidebar-identity,.entry-session-note,.schema-card){border-color:#ccd6c7}
+html[data-theme=light] .sql-app input{background:#fffef9;color:#182d26;border-color:#b8c7b1}
+html[data-theme=light] .sql-app .arena-primary{background:#cdec80;color:#203400;border-color:#adc969;box-shadow:0 8px 22px #6f8a171c}
+html[data-theme=light] .sql-app .arena-secondary,html[data-theme=light] .theme-toggle{background:#f3f7e9;color:#294d19;border-color:#b6c5aa}
+html[data-theme=light] :is(.arena-text-link,.arena-breadcrumb strong,.sidebar-note strong,.arena-footer b,.editor-focus){color:#3f602d}
+html[data-theme=light] .hero-facts b{color:#304f18}
+html[data-theme=light] .hero-art{background:radial-gradient(ellipse,#d8eab8,transparent 65%),#e7efda;border-color:#b6c99f}
+html[data-theme=light] .sql-cube{background:linear-gradient(150deg,#faffef,#ddeac5);border-color:#8da770;box-shadow:14px 17px #d0ddb9,15px 18px #9caf85,0 25px 40px #42621729}
+html[data-theme=light] .sql-cube>strong{color:#3f6014;text-shadow:none}
+html[data-theme=light] :is(.cube-code,.cube-top,.cube-bottom,.cube-code span,.art-label){color:#446338}
+html[data-theme=light] .art-chip{background:#f6fbe9;color:#395e19;border-color:#b5c99e}
+html[data-theme=light] :is(.invite-icon,.player-monogram,.profile-monogram,.result-emblem,.invite-code){background:#e1edc9;border-color:#a6be83;color:#3b6015;box-shadow:none}
+html[data-theme=light] .difficulty-tabs .selected{background:#e0edc8;color:#345815;border-color:#adc28c}
+html[data-theme=light] .arena-difficulty.easy{background:#e4f1da;color:#38652a;border-color:#aac89a}
+html[data-theme=light] .arena-difficulty.medium{background:#fff0d0;color:#79571f;border-color:#d7bd85}
+html[data-theme=light] .arena-difficulty.hard{background:#f4e0ed;color:#7d3469;border-color:#cba0bd}
+html[data-theme=light] .entry-story{background:radial-gradient(ellipse at 20% 65%,#deebc5,transparent 70%),#e8efdc;border-color:#bdcbb1}
+html[data-theme=light] .entry-code{background:#f5faec;color:#466634;border-color:#b5c99e;box-shadow:0 18px 50px #243d1514}
+html[data-theme=light] .sql-app .sql-result-table{background:#fffef9}
+html[data-theme=light] .sql-app .sql-result-table th{background:#e6eedb;color:#405d33}
+html[data-theme=light] .sql-app .sql-result-table td{color:#253d2f}
+html[data-theme=light] .sql-app .sql-result-table :is(th,td){border-color:#d1dcc6}
+html[data-theme=light] .sql-app .sql-result-table tr:hover td{background:#edf3e4}
+html[data-theme=light] :is(.editor-actions,.editor-wrap){background:#fff}
+html[data-theme=light] .schema-card summary{color:#304e39}
+html[data-theme=light] .arena-error{background:#fff0e9;color:#873d21;border-color:#dfae99}
+html[data-theme=light] .round-banner{background:#e3efc8;color:#385711;border-color:#b0c78b}
+html[data-theme=light] .arena-verdict p{color:#4d6356}
+html[data-theme=light] .review-round pre{background:#eaf1df;color:#2e5035;border-color:#bfceaf}
+html[data-theme=light] :is(.progress-stats strong,.accepted-label){color:#436c16}
+
+.match-skill label{display:block;font:11px monospace;margin-bottom:12px}.match-skill input{width:55%;accent-color:var(--acid);margin-right:18px}.match-skill>strong{display:block;margin-top:18px}

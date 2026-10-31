@@ -17,6 +17,15 @@ public class User {
     private int rating = 1200;
     @Column(name = "created_at") private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "skill_level", nullable = false) private int skillLevel = 5;
+    @Column(name = "session_expires_at") private LocalDateTime sessionExpiresAt;
+    public int getSkillLevel() { return skillLevel; }
+    public void setSkillLevel(int value) { skillLevel = value; }
+    public LocalDateTime getSessionExpiresAt() { return sessionExpiresAt; }
+    public void setSessionExpiresAt(LocalDateTime value) { sessionExpiresAt = value; }
+    public boolean sessionExpired() { return sessionExpiresAt != null && !sessionExpiresAt.isAfter(LocalDateTime.now(java.time.ZoneOffset.UTC)); }
+    public String getDisplayName() { return username.startsWith("~expired~") ? "Expired guest" : username; }
+
     public UUID getId() { return id; }
     public String getUsername() { return username; }
     public void setUsername(String v) { this.username = v; }

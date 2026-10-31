@@ -9,6 +9,8 @@ public class SqlArenaController {
     private final SqlArenaService arena;
     private final SqlRequestLimit limit;
     public SqlArenaController(SqlArenaService a,SqlRequestLimit l) {arena=a;limit=l;}
+    public record Skill(int level) {}
+    @PostMapping("/{id}/skill") public Map<String,Object> skill(@PathVariable UUID id,@RequestBody Skill skill,@AuthenticationPrincipal User user) {return arena.skill(id,user,skill.level());}
     public record Query(int round,String query) {}
     @PostMapping public Map<String,Object> create(@AuthenticationPrincipal User u) {limit.check(u);return arena.create(u);}
     @PostMapping("/join/{code}") public Map<String,Object> join(@PathVariable String code,@AuthenticationPrincipal User u) {limit.check(u);return arena.join(code,u);}

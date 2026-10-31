@@ -10,7 +10,7 @@ import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
 import static org.junit.jupiter.api.Assertions.*;
-@SpringBootTest(properties={"RENDER=false", "spring.datasource.url=jdbc:h2:mem:arena;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "app.jwt.secret=test-only-long-secret-key-for-sql-arena", "supabase.key=test", "spring.data.redis.password="})
+@SpringBootTest(properties={"RENDER=false", "spring.sql.init.mode=never", "spring.datasource.url=jdbc:h2:mem:arena;MODE=PostgreSQL;DB_CLOSE_DELAY=-1", "spring.datasource.driver-class-name=org.h2.Driver", "spring.datasource.username=sa", "spring.datasource.password=", "spring.jpa.hibernate.ddl-auto=create-drop", "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect", "app.jwt.secret=test-only-long-secret-key-for-sql-arena", "supabase.key=test", "spring.data.redis.password="})
 @org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 class SqlArenaTest {
  @Autowired SqlArenaService arena; @Autowired UserRepository users; @Autowired RoomRepository rooms; @Autowired SqlProblemBank bank;
@@ -24,6 +24,30 @@ class SqlArenaTest {
  Map<String,Object> match(){var m=arena.create(a);arena.join((String)m.get("code"),b);return arena.start(id(m),a);}
  String solution(Map<String,Object> m){return bank.findBySlug((String)((Map<?,?>)m.get("problem")).get("slug")).orElseThrow().referenceQuery();}
  void expire(UUID id){var r=rooms.findById(id).orElseThrow();r.setEndTime(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1));rooms.save(r);}
+ @Test void skillChoosesSharedQuestionsAndLocksAtStart(){
+   a.setSkillLevel(1);users.save(a);b.setSkillLevel(3);users.save(b);
+   var m=match();assertEquals(2,m.get("skillLevel"));
+   assertEquals("easy",((Map<?,?>)m.get("problem")).get("difficulty"));
+   assertThrows(ResponseStatusException.class,()->arena.skill(id(m),a,10));
+   var high=arena.create(a);arena.skill(id(high),a,10);arena.join((String)high.get("code"),b);arena.skill(id(high),b,10);
+   var started=arena.start(id(high),a);assertEquals(10,started.get("skillLevel"));
+   assertEquals("hard",((Map<?,?>)started.get("problem")).get("difficulty"));
+ }
+ @Test void expiredGuestNameIsReusableWithoutTakingOverHistory() throws Exception {
+   a.setUsername("reuse_"+UUID.randomUUID().toString().substring(0,8));
+   a.setSessionExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1));users.save(a);
+   String originalEmail=a.getEmail();String name=a.getUsername();
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content("{\"username\":\""+name+"\",\"skillLevel\":\"7\"}"))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+   assertNotEquals(a.getId(),users.findByUsername(name).orElseThrow().getId());
+   assertEquals(7,users.findByUsername(name).orElseThrow().getSkillLevel());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems").header("Authorization","Bearer "+jwt.generate(originalEmail)))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+ }
+ @Test void invalidSkillIsRejected() throws Exception {
+   for(String level:List.of("0","11","bad")) http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content("{\"username\":\"newguest\",\"skillLevel\":\""+level+"\"}"))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+ }
  @Test void membershipCapacityAndStartAreEnforced(){var m=arena.create(a);assertThrows(ResponseStatusException.class,()->arena.state(id(m),outsider));assertThrows(ResponseStatusException.class,()->arena.start(id(m),a));arena.join((String)m.get("code"),b);assertThrows(ResponseStatusException.class,()->arena.join((String)m.get("code"),outsider));assertThrows(ResponseStatusException.class,()->arena.start(id(m),b));}
  @Test void bestOfThreeEndsAtTwoAndRematchIsShared(){var m=match();UUID id=id(m);arena.submit(id,a,1,solution(m));expire(id);m=arena.state(id,a);assertEquals(2,m.get("round"));arena.submit(id,a,2,solution(m));m=arena.state(id,a);assertEquals("finished",m.get("status"));assertEquals(a.getUsername(),m.get("winner"));var next=arena.rematch(id,a);assertEquals(id(next),id(arena.rematch(id,b)));assertEquals(2,((List<?>)arena.state(id(next),a).get("players")).size());}
  @Test void finishedOrStaleRoundCannotScore(){var m=match();UUID id=id(m);String sql=solution(m);arena.submit(id,a,1,sql);assertThrows(ResponseStatusException.class,()->arena.submit(id,b,1,sql));expire(id);arena.state(id,a);assertThrows(ResponseStatusException.class,()->arena.submit(id,b,1,sql));arena.leave(id,a);assertThrows(ResponseStatusException.class,()->arena.submit(id,b,2,sql));}

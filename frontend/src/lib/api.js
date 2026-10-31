@@ -28,7 +28,7 @@ export const api = {
   arenaState: (id) => req(`/api/sql-arena/${id}`),
   arenaAction: (id, action, body = {}) => req(`/api/sql-arena/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) }),
   sqlRun: (slug, query) => req(`/api/sql-problems/${slug}/run`, { method: 'POST', body: JSON.stringify({ query }) }),
-  join: (username) => req('/api/auth/join', { method: 'POST', body: JSON.stringify({ username }) }),
+  join: (username, skillLevel = 5) => req('/api/auth/join', { method: 'POST', body: JSON.stringify({ username, skillLevel: String(skillLevel) }) }),
   problems: (difficulty) => req('/api/problems' + (difficulty ? `?difficulty=${difficulty}` : '')),
   problem: (slug) => req(`/api/problems/${slug}`),
   samples: (slug) => req(`/api/problems/${slug}/samples`),
