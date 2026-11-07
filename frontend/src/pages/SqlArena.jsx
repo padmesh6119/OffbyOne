@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
+import { subscribeRoom } from '../lib/ws';
 import ResultTable from '../components/SqlResultTable';
 import ArenaVisual from '../components/ArenaVisual';
 import PracticeGuide from '../components/PracticeGuide';
@@ -74,17 +75,53 @@ export default function SqlArena() {
   const updateMatch = useCallback(m => {
     setMatch(m); setOffset(Date.parse(m.serverTime) - Date.now());
   }, []);
+  const inFlightRef = useRef(false);
+  const queuedRefreshRef = useRef(false);
+
+  const refreshMatch = useCallback(async () => {
+    if (!roomId) return;
+    if (inFlightRef.current) {
+      queuedRefreshRef.current = true;
+      return;
+    }
+    inFlightRef.current = true;
+    queuedRefreshRef.current = false;
+    const version = generation.current;
+    try {
+      const m = await api.arenaState(roomId);
+      if (version === generation.current) updateMatch(m);
+    } catch (e) {
+      setError(errorMessage(e));
+    } finally {
+      inFlightRef.current = false;
+      if (queuedRefreshRef.current) {
+        queuedRefreshRef.current = false;
+        refreshMatch();
+      }
+    }
+  }, [roomId, updateMatch]);
+
+  useEffect(() => {
+    if (!roomId) return;
+    const unsubscribe = subscribeRoom(roomId, {
+      onLobby: () => { refreshMatch(); },
+      onSubmission: () => { refreshMatch(); },
+      onFinished: () => { refreshMatch(); },
+    });
+    return () => { unsubscribe(); };
+  }, [roomId, refreshMatch]);
+
   useEffect(() => {
     if (!roomId) return;
     let live = true, timer;
     const poll = async () => {
-      const version = generation.current;
-      try { const m = await api.arenaState(roomId); if (live && version === generation.current) updateMatch(m); }
-      catch (e) { if (live) setError(errorMessage(e)); }
-      if (live) timer = setTimeout(poll, 2000);
+      if (!live) return;
+      await refreshMatch();
+      if (live) timer = setTimeout(poll, 2500);
     };
-    poll(); return () => { live = false; clearTimeout(timer); };
-  }, [roomId, updateMatch]);
+    poll();
+    return () => { live = false; clearTimeout(timer); };
+  }, [roomId, refreshMatch]);
   useEffect(() => { const t = setInterval(() => setClock(Date.now()), 250); return () => clearInterval(t); }, []);
   useEffect(() => {
     if (draftKey) setQuery(localStorage.getItem(draftKey) ?? starter);
@@ -124,6 +161,15 @@ export default function SqlArena() {
     catch { setError('Copy the invite code below and send it to your opponent.'); }
   }
   const seconds = match?.deadline ? Math.max(0, Math.ceil((Date.parse(match.deadline) - clock - offset) / 1000)) : 0;
+  const tickDeadlineRef = useRef(null);
+  useEffect(() => {
+    if (['active', 'intermission'].includes(match?.status) && match?.deadline && seconds === 0) {
+      if (tickDeadlineRef.current !== match.deadline) {
+        tickDeadlineRef.current = match.deadline;
+        refreshMatch();
+      }
+    }
+  }, [match?.status, match?.deadline, seconds, refreshMatch]);
   const active = match?.status === 'active';
   const finished = match?.status === 'finished';
   const me = match?.players.find(p => p.username === username);
