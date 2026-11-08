@@ -11,18 +11,21 @@ import Help from './pages/Help';
 import NotFound from './pages/NotFound';
 import PlayerMenu from './components/PlayerMenu';
 import AppBoundary from './components/AppBoundary';
+import Icon from './components/Icon';
 import { api, errorMessage } from './lib/api';
 import { clearSession, updateSession } from './lib/session';
 import './index.css';
 import './design.css';
 import './engagement.css';
 import './essentials.css';
+import './studio.css';
 
 function Workspace() {
   const location = useLocation();
   const [, refresh] = useState(0), [now, setNow] = useState(Date.now()), [online, setOnline] = useState(navigator.onLine);
   const [sessionError, setSessionError] = useState(''), [retry, setRetry] = useState(0);
   const token = localStorage.getItem('token');
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [location.pathname, location.search]);
   useEffect(() => {
     const changed = () => refresh(v => v + 1);
     const connected = () => setOnline(navigator.onLine);
@@ -48,9 +51,23 @@ function Workspace() {
   const section = { '/profile': 'YOUR PROGRESS', '/leaderboard': 'THE STANDINGS', '/settings': 'YOUR SETTINGS', '/help': 'THE BRIEFING' }[location.pathname] || 'THE ARENA';
   return <div className="sql-app workspace">
     <a className="skip-link" href="#workspace-main">Skip to content</a>
+    <aside className="club-sidebar">
+      <NavLink to="/" className="workspace-brand"><span className="brand-symbol">/₁</span> offbyone<span className="brand-period">.</span></NavLink>
+      <span className="sidebar-caption">THE SQL PLAYGROUND</span>
+      <div className="sidebar-label">YOUR WORKSPACE</div>
+      <nav aria-label="Main navigation" className="club-nav">
+        <NavLink to="/" end><Icon name="arena"/>SQL Arena<span className="nav-active-dot"/></NavLink>
+        <NavLink to="/profile"><Icon name="progress"/>My Progress</NavLink>
+        <NavLink to="/leaderboard"><Icon name="trophy"/>Standings</NavLink>
+      </nav>
+      <div className="sidebar-bottom">
+        <div className="club-note"><Icon name="code" size={26}/><strong>One query closer.</strong><p>A little practice today.<br/>A better player tomorrow.</p><NavLink to="/help">Find your starting point ↗</NavLink></div>
+        <nav className="club-nav" aria-label="Resources"><NavLink to="/settings"><Icon name="settings"/>Settings & drafts</NavLink><NavLink to="/help"><Icon name="help"/>Help & shortcuts</NavLink></nav>
+        <span className="sidebar-signoff"><i/> BUILT FOR CURIOUS MINDS</span>
+      </div>
+    </aside>
     <header className="site-header">
-      <NavLink to="/" className="workspace-brand"><span className="brand-symbol">[ / ]</span> offbyone<span className="brand-period">.</span></NavLink>
-      <nav aria-label="Main navigation" className="workspace-nav"><NavLink to="/" end>SQL Arena</NavLink><NavLink to="/profile">My Progress</NavLink><NavLink to="/leaderboard">Standings</NavLink></nav>
+      <div className="header-title"><span>Workspace</span><span>/</span><strong>{section === 'THE ARENA' ? 'SQL Arena' : section === 'YOUR PROGRESS' ? 'My Progress' : section === 'THE STANDINGS' ? 'Standings' : section === 'YOUR SETTINGS' ? 'Settings & drafts' : 'Help & shortcuts'}</strong></div>
       <div className="header-account"><ThemeToggle/>{token ? <PlayerMenu/> : <NavLink className="arena-secondary" to="/join">Get a guest pass ↗</NavLink>}</div>
     </header>
     <main className="workspace-main" id="workspace-main" tabIndex="-1">

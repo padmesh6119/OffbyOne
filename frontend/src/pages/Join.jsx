@@ -23,7 +23,7 @@ export default function Join() {
     } catch (e) { setError(errorMessage(e)); setBusy(false); }
   }
   return <div className="sql-app entry-page">
-    <div className="entry-story"><div className="workspace-brand"><span className="brand-symbol">[ / ]</span> offbyone<span className="brand-period">.</span></div>
+    <div className="entry-story"><div className="workspace-brand"><span className="brand-symbol">/₁</span> offbyone<span className="brand-period">.</span></div>
       <div className="entry-pitch"><div className="arena-eyebrow">SQL IS A COMPETITIVE SPORT.</div><h1>Bring your<br/>best <em>query.</em></h1><p>Two minds. One dataset.<br/>Find your edge, one duel at a time.</p></div><ArenaVisual/>
       <div className="entry-bottom"><span>01 / THINK</span><span>02 / QUERY</span><span>03 / OUTPLAY</span></div>
     </div>
