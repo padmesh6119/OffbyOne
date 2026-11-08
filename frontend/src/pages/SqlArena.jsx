@@ -40,7 +40,7 @@ export default function SqlArena() {
     try { localStorage.setItem(bookmarkKey, JSON.stringify([...next])); setBookmarks(next); }
     catch { setError('Your browser could not save the bookmark. Check its storage settings.'); }
   }
-  const [roomId, setRoomId] = useState(() => localStorage.getItem(savedKey));
+  const [roomId, setRoomId] = useState(() => params.has('challenge') ? null : localStorage.getItem(savedKey));
   const [match, setMatch] = useState(null);
   const [bank, setBank] = useState([]);
   const [practice, setPractice] = useState(null);
@@ -164,7 +164,7 @@ export default function SqlArena() {
     if (!problem || !query.trim()) return;
     await action(submit ? 'Judging' : 'Running', async () => {
       if (!submit) setResult(await api.sqlRun(problem.slug, query));
-      else if (roomId) { const response = await api.arenaAction(roomId, 'submit', { round: match.round, query }); setResult(response.result); updateMatch(response.match); }
+      else if (roomId) { const response = await api.arenaAction(roomId, 'submit', { round: match.round, query }); setResult(response.result); updateMatch(response.match); if (response.result?.status === 'accepted') setSolved(previous => new Set([...previous, problem.slug])); }
       else {
         const r = await api.sqlSubmit(problem.slug, query);
         setResult({ status: r.verdict, message: r.message, actualColumns: r.actual?.columns, actualRows: r.actual?.rows, expectedColumns: r.expected?.columns, expectedRows: r.expected?.rows });
@@ -203,6 +203,7 @@ export default function SqlArena() {
         <section className="arena-hero"><div className="hero-copy"><div className="arena-eyebrow"><span/> A SMALL EDGE. A GREAT RIVALRY.</div><h1>Good query.<br/><em>Great game.</em></h1><p>A battle of logic, not luck. Challenge a friend to a SQL duel, or find your edge in the training ground.</p><div className="hero-buttons"><button className="arena-primary" disabled={!!busy} onClick={() => action('Creating match', async () => enter(await api.arenaCreate()))}><Glyph/> {busy === 'Creating match' ? 'Deploying…' : 'Deploy a duel'} <Glyph type="arrow"/></button><a className="arena-text-link" href="#challenges" onClick={e => { e.preventDefault(); document.getElementById('challenges')?.scrollIntoView({ behavior: 'smooth' }); }}>Enter training ↗</a></div><div className="hero-facts"><span><b>01</b> opponent</span><span><b>03</b> rounds max</span><span><b>05</b> minutes / round</span></div></div>
           <ArenaVisual/>
         </section>
+        {localStorage.getItem(savedKey) && <div className="resume-match"><div><strong>Your duel is still here.</strong><p>Jump back into your remembered match whenever you are ready.</p></div><button className="arena-secondary" disabled={!!busy} onClick={() => action('Resuming match', async () => enter(await api.arenaState(localStorage.getItem(savedKey))))}>Resume duel ↗</button></div>}
         <section className="arena-invite"><div className="invite-icon"><Glyph/></div><div><strong>Your rival is waiting.</strong><p>Enter your opponent’s code to enter their arena.</p></div><form onSubmit={e => { e.preventDefault(); action('Joining match', async () => enter(await api.arenaJoin(code.trim()))); }}><input aria-label="Invite code" placeholder="INVITE CODE" value={code} maxLength={40} onChange={e => setCode(e.target.value.toUpperCase())}/><button className="arena-secondary" disabled={!!busy || !code.trim()}>Join duel <span>↗</span></button></form></section>
         <PracticeHub bank={bank} solved={solved} busy={!!busy} onOpen={openPractice}/>
         <ChallengeLibrary bank={bank} solved={solved} bookmarks={bookmarks} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} status={practiceStatus} setStatus={setPracticeStatus} busy={!!busy} onOpen={openPractice} onBookmark={toggleBookmark}/>

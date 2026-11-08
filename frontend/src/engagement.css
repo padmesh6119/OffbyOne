@@ -97,3 +97,5 @@ progress::-moz-progress-bar{background:var(--accent);border-radius:8px}
 .learning-path:hover{transform:none}
 }
 
+
+.resume-match{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:20px 24px;background:var(--soft);border:1px solid var(--border);border-radius:10px;margin-bottom:20px}.resume-match strong{color:var(--text);font-size:14px}.resume-match p{color:var(--muted);font-size:12px;margin:6px 0 0}
