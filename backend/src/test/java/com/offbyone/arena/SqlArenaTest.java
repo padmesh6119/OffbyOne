@@ -132,4 +132,26 @@ class SqlArenaTest {
     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
  }
 
+ @Test void logoutRevokesPassReleasesNameAndForfeitsDuel() throws Exception {
+   String name="logout_"+UUID.randomUUID().toString().substring(0,8);
+   a.setUsername(name);a.setSessionExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1));users.save(a);
+   String auth="Bearer "+jwt.generate(a.getEmail());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/session").header("Authorization",auth).contentType("application/json").content("{\"skillLevel\":\"7\"}"))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+   assertEquals(7,users.findById(a.getId()).orElseThrow().getSkillLevel());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/auth/session").header("Authorization",auth).contentType("application/json").content("{\"skillLevel\":\"11\"}"))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
+   var m=match();
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/logout").header("Authorization",auth))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+   assertTrue(users.findById(a.getId()).orElseThrow().sessionExpired());
+   assertEquals(b.getId(),rooms.findById(id(m)).orElseThrow().getWinner().getId());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems").header("Authorization",auth))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content("{\"username\":\""+name+"\"}"))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/logout"))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+ }
+
 }

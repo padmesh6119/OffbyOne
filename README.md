@@ -76,3 +76,11 @@ The original `tools/gen_sql_bank.py` is a historical sample-bank generator. Do n
 - Challenge links survive refresh. Guest passes still expire after 24 hours; an exported snapshot is a personal record, not a login or pass restore mechanism.
 
 These features use existing SQL submissions and the existing database; they require no additional service, migration, or paid API.
+
+### Session and workspace controls
+
+- The player menu links to progress, settings, help, and logout. Logout revokes the guest pass on the server, releases its name immediately, forfeits unfinished SQL duels, and clears that pass's local drafts, bookmarks, and remembered match. A new pass starts fresh.
+- Session time remaining is displayed in the header. Expiry and logout synchronize across browser tabs, with an export reminder during the final 15 minutes.
+- Settings save the SQL level for future duels and browser preferences for theme, font size, word wrapping, line numbers, and reduced animations.
+- The local draft manager supports review, SQL downloads, opening drafts in practice, and confirmed deletion. The editor supports importing .sql/.txt files up to 16 KB, downloading SQL, and confirmed reset.
+- Public help covers the judge, guest lifecycle, shortcuts, and free hosting behavior. Unknown routes have a 404 page, offline requests receive an explanation, and rendering errors offer recovery.

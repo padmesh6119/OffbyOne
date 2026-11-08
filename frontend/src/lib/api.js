@@ -1,3 +1,4 @@
+import { clearSession } from './session';
 const BASE = (import.meta.env.VITE_API_URL || 'http://localhost:8080').replace(/\/+$/, '');
 
 function headers() {
@@ -10,19 +11,27 @@ function headers() {
 
 async function req(path, options = {}) {
   const requestHeaders = headers();
-  const res = await fetch(BASE + path, { ...options, headers: requestHeaders });
+  if (!navigator.onLine) throw new Error('You are offline. Reconnect and try again.');
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 75000);
+  let res;
+  try { res = await fetch(BASE + path, { ...options, headers: requestHeaders, signal: controller.signal }); }
+  catch (e) { throw new Error(e.name === 'AbortError' ? 'The server is taking too long. Please try again; free hosting can take a moment to wake up.' : 'Could not reach the server. Check your connection and try again.'); }
+  finally { clearTimeout(timeout); }
   if (res.status === 401 && requestHeaders.Authorization === headers().Authorization) {
     const next = location.hash.slice(1) || '/';
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
+    clearSession();
     location.replace(`${location.pathname}#/join?expired=1&next=${encodeURIComponent(next)}`);
     throw new Error('Session expired, please rejoin.');
   }
   if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  return res.status === 204 ? null : res.json();
 }
 
 export const api = {
+  session: () => req('/api/auth/session'),
+  updateSession: (skillLevel) => req('/api/auth/session', { method: 'PATCH', body: JSON.stringify({skillLevel: String(skillLevel)}) }),
+  logout: () => req('/api/auth/logout', {method:'POST'}),
   arenaCreate: () => req('/api/sql-arena', { method: 'POST' }),
   arenaJoin: (code) => req(`/api/sql-arena/join/${encodeURIComponent(code)}`, { method: 'POST' }),
   arenaState: (id) => req(`/api/sql-arena/${id}`),
