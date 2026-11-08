@@ -4,6 +4,8 @@ import { HashRouter, Routes, Route, NavLink, Navigate, Outlet, useLocation } fro
 import Join from './pages/Join';
 import SqlArena from './pages/SqlArena';
 import Profile from './pages/Profile';
+import Leaderboard from './pages/Leaderboard';
+import './engagement.css';
 import './index.css';
 import './design.css';
 
@@ -21,11 +23,11 @@ function Workspace() {
     check(); const timer = setInterval(check, 1000); return () => clearInterval(timer);
   }, []);
   if (!localStorage.getItem('token')) return <Navigate to="/join" state={{ from: location.pathname + location.search }} replace />;
-  const section = location.pathname === '/profile' ? 'YOUR PROGRESS' : 'THE ARENA';
+  const section = location.pathname === '/profile' ? 'YOUR PROGRESS' : location.pathname === '/leaderboard' ? 'THE STANDINGS' : 'THE ARENA';
   return <div className="sql-app workspace">
     <header className="site-header">
       <NavLink to="/" className="workspace-brand"><span className="brand-symbol">[ / ]</span> offbyone<span className="brand-period">.</span></NavLink>
-      <nav aria-label="Main navigation" className="workspace-nav"><NavLink to="/" end>SQL Arena</NavLink><NavLink to="/profile">My Progress</NavLink></nav>
+      <nav aria-label="Main navigation" className="workspace-nav"><NavLink to="/" end>SQL Arena</NavLink><NavLink to="/profile">My Progress</NavLink><NavLink to="/leaderboard">Standings</NavLink></nav>
       <div className="header-account"><ThemeToggle/><span className="player-monogram">{username?.[0]?.toUpperCase()}</span><span>{username}</span></div>
     </header>
     <main className="workspace-main">
@@ -42,6 +44,7 @@ export default function App() {
     <Route element={<Workspace />}>
       <Route index element={<SqlArena />} />
       <Route path="/profile" element={<Profile />} />
+      <Route path="/leaderboard" element={<Leaderboard />} />
     </Route>
     <Route path="/sql" element={<ArenaAlias />} />
     <Route path="*" element={<Navigate to="/" replace />} />

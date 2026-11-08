@@ -17,7 +17,7 @@ public class Submission {
     private String verdict = "pending";
     @Column(name = "runtime_ms") private Integer runtimeMs;
     @Column(name = "memory_kb") private Integer memoryKb;
-    @Column(name = "submitted_at") private LocalDateTime submittedAt = LocalDateTime.now();
+    @Column(name = "submitted_at") private LocalDateTime submittedAt = LocalDateTime.now(java.time.ZoneOffset.UTC);
 
     public UUID getId() { return id; }
     public User getUser() { return user; }

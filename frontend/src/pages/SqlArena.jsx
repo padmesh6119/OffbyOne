@@ -1,11 +1,13 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
 import { subscribeRoom } from '../lib/ws';
 import ResultTable from '../components/SqlResultTable';
 import ArenaVisual from '../components/ArenaVisual';
 import PracticeGuide from '../components/PracticeGuide';
 import ChallengeLibrary from '../components/ChallengeLibrary';
+import PracticeHub from '../components/PracticeHub';
+import '../engagement.css';
 
 const SqlEditor = lazy(() => import('../components/SqlEditor'));
 const fmt = s => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -22,7 +24,6 @@ function Status({ result }) {
 
 export default function SqlArena() {
   const [params, setParams] = useSearchParams();
-  const routeLocation = useLocation();
   const username = localStorage.getItem('username');
   const savedKey = `obo:match:${username}`;
   const bookmarkKey = `obo:bookmarks:${username}`;
@@ -63,7 +64,18 @@ export default function SqlArena() {
   const problem = roomId ? match?.problem : practice;
   const draftKey = problem ? `obo:draft:${username}:${roomId || 'practice'}:${problem.slug}` : null;
 
-  useEffect(() => { if (!roomId) setPractice(null); }, [routeLocation.key]);
+  useEffect(() => {
+    if (roomId) return;
+    const slug = params.get('challenge');
+    setPractice(null);
+    if (!slug) { setBusy(''); return; }
+    let live = true;
+    setBusy('Opening challenge'); setError('');
+    api.sqlProblem(slug).then(detail => { if (live) setPractice(detail); })
+      .catch(e => { if (live) setError(errorMessage(e)); })
+      .finally(() => { if (live) setBusy(''); });
+    return () => { live = false; };
+  }, [params, roomId]);
 
   useEffect(() => {
     let live = true;
@@ -127,7 +139,18 @@ export default function SqlArena() {
     if (draftKey) setQuery(localStorage.getItem(draftKey) ?? starter);
     setResult(null);
     setPracticeReview(null);
-  }, [draftKey]);
+    const attempt = params.get('attempt');
+    let live = true;
+    if (draftKey && attempt && !roomId) {
+      setBusy('Restoring query');
+      api.submission(attempt).then(s => {
+      if (live && s.problemSlug === problem.slug && s.language === 'sql') {
+        setQuery(s.code); localStorage.setItem(draftKey, s.code);
+      }
+    }).catch(e => { if (live) setError(errorMessage(e)); }).finally(() => { if (live) setBusy(''); });
+    }
+    return () => { live = false; };
+  }, [draftKey, params.get('attempt')]);
   function edit(value) { const text = value ?? ''; setQuery(text); if (draftKey) localStorage.setItem(draftKey, text); }
   function enter(m) { generation.current++; selectedRef.current++; setPractice(null); setRoomId(m.id); localStorage.setItem(savedKey, m.id); updateMatch(m); setParams({}); }
   async function action(label, fn) {
@@ -136,10 +159,7 @@ export default function SqlArena() {
     try { await fn(); } catch (e) { setError(errorMessage(e)); } finally { generation.current++; setBusy(''); }
   }
   function home() { selectedRef.current++; generation.current++; setRoomId(null); setMatch(null); setPractice(null); setResult(null); localStorage.removeItem(savedKey); }
-  async function openPractice(p) {
-    const version = ++selectedRef.current;
-    await action('Opening challenge', async () => { const detail = await api.sqlProblem(p.slug); if (version === selectedRef.current) { setPractice(detail); setResult(null); } });
-  }
+  function openPractice(p) { setParams({ challenge: p.slug }); }
   async function execute(submit) {
     if (!problem || !query.trim()) return;
     await action(submit ? 'Judging' : 'Running', async () => {
@@ -184,11 +204,12 @@ export default function SqlArena() {
           <ArenaVisual/>
         </section>
         <section className="arena-invite"><div className="invite-icon"><Glyph/></div><div><strong>Your rival is waiting.</strong><p>Enter your opponent’s code to enter their arena.</p></div><form onSubmit={e => { e.preventDefault(); action('Joining match', async () => enter(await api.arenaJoin(code.trim()))); }}><input aria-label="Invite code" placeholder="INVITE CODE" value={code} maxLength={40} onChange={e => setCode(e.target.value.toUpperCase())}/><button className="arena-secondary" disabled={!!busy || !code.trim()}>Join duel <span>↗</span></button></form></section>
+        <PracticeHub bank={bank} solved={solved} busy={!!busy} onOpen={openPractice}/>
         <ChallengeLibrary bank={bank} solved={solved} bookmarks={bookmarks} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} status={practiceStatus} setStatus={setPracticeStatus} busy={!!busy} onOpen={openPractice} onBookmark={toggleBookmark}/>
       </>}
       {match?.status === 'waiting' && <section className="arena-lobby"><div className="arena-eyebrow">PRIVATE MATCH / BEST OF THREE</div><h1>A rivalry starts<br/>with an <em>invite.</em></h1><p>Two players. Three SQL challenges. Five minutes per round.</p><div className="match-skill"><label htmlFor="lobby-skill">YOUR SQL LEVEL · {skillLevel}/10</label><input id="lobby-skill" aria-label="Duel skill level" type="range" min="1" max="10" value={skillLevel} onChange={e => setSkillLevel(Number(e.target.value))}/><button className="arena-secondary" disabled={!!busy || me?.skillLevel === skillLevel} onClick={() => action('Setting skill', async () => { updateMatch(await api.arenaAction(roomId, 'skill', {level: skillLevel})); localStorage.setItem('skillLevel', skillLevel); })}>Save level</button><strong>DUEL LEVEL {match.skillLevel}/10 · {match.skillLevel <= 3 ? 'FOUNDATIONS' : match.skillLevel <= 7 ? 'INTERMEDIATE' : 'ADVANCED'}</strong><p>{match.players.map(p => `${p.username}: ${p.skillLevel}/10`).join(' · ')}</p><small>Rounded average of both players. Same three questions, closest available difficulty, no repeats. Levels are self-rated.</small></div><div className="lobby-duo"><Player name={username} score={0}/><span>VS</span><Player name={opponent?.username} score={0}/></div><button className="invite-code" onClick={copyInvite}><small>{copied ? 'INVITE LINK COPIED' : 'CLICK TO COPY INVITE LINK'}</small><strong>{match.code.length > 12 ? 'REMATCH INVITE ↗' : match.code}</strong></button><div className="lobby-actions">{match.host === username ? <button className="arena-primary" disabled={!!busy || !opponent} onClick={() => action('Starting', async () => updateMatch(await api.arenaAction(roomId, 'start')))}>{opponent ? 'Start the duel →' : 'Waiting for your challenger…'}</button> : <p className="arena-eyebrow">Waiting for {match.host} to start…</p>}<button className="arena-text-link" disabled={!!busy} onClick={() => action('Leaving', async () => { await api.arenaAction(roomId, 'leave'); home(); })}>Leave lobby</button></div></section>}
       {(practice || (match && ['active', 'intermission'].includes(match.status))) && problem && <>
-        <div className="workspace-heading"><div><div className="arena-eyebrow">{roomId ? `ROUND ${match.round} OF 3 / FIRST TO TWO` : 'TRAINING GROUND / SOLO PRACTICE'}</div><h2>{roomId ? 'Every query counts.' : 'Find your flow.'}</h2></div>{roomId ? <div className={`arena-clock ${seconds < 30 ? 'urgent' : ''}`}><span>{active ? 'ROUND ENDS IN' : 'NEXT ROUND IN'}</span><strong>{fmt(seconds)}</strong></div> : <div className="practice-actions"><button className="arena-secondary" aria-pressed={bookmarks.has(problem.slug)} onClick={() => toggleBookmark(problem.slug)}>{bookmarks.has(problem.slug) ? '★ Bookmarked' : '☆ Bookmark challenge'}</button><button className="arena-secondary" disabled={!!busy} onClick={() => { selectedRef.current++; setPractice(null); }}>← All challenges</button></div>}</div>
+        <div className="workspace-heading"><div><div className="arena-eyebrow">{roomId ? `ROUND ${match.round} OF 3 / FIRST TO TWO` : 'TRAINING GROUND / SOLO PRACTICE'}</div><h2>{roomId ? 'Every query counts.' : 'Find your flow.'}</h2></div>{roomId ? <div className={`arena-clock ${seconds < 30 ? 'urgent' : ''}`}><span>{active ? 'ROUND ENDS IN' : 'NEXT ROUND IN'}</span><strong>{fmt(seconds)}</strong></div> : <div className="practice-actions"><button className="arena-secondary" aria-pressed={bookmarks.has(problem.slug)} onClick={() => toggleBookmark(problem.slug)}>{bookmarks.has(problem.slug) ? '★ Bookmarked' : '☆ Bookmark challenge'}</button><button className="arena-secondary" disabled={!!busy} onClick={() => { selectedRef.current++; setParams({}); }}>← All challenges</button></div>}</div>
         {roomId && <div className="arena-scoreboard"><Player name={username} score={me?.score || 0}/><div className="round-pips">{[1, 2, 3].map(n => <span key={n} className={n === match.round ? 'current' : n < match.round ? 'done' : ''}>{n}</span>)}</div><Player name={opponent?.username} score={opponent?.score || 0}/></div>}
         {match?.status === 'intermission' && <div className="round-banner" role="status"><strong>{match.history.find(h => h.round === match.round)?.winner ? `${match.history.find(h => h.round === match.round).winner} takes the round.` : 'Time is up. This round is a draw.'}</strong><span>Next challenge in {seconds}s</span></div>}
         <section className={`arena-workspace ${focusEditor ? 'focus-editor' : ''}`}><div className="challenge-panel"><div className="panel-title"><span><Glyph type="db"/> THE CHALLENGE</span><span className={`arena-difficulty ${problem.difficulty}`}>{problem.difficulty}</span></div><div className="challenge-description"><span className="arena-eyebrow">{problem.pattern?.replaceAll('+', ' + ')}</span><h2>{problem.title}</h2><p>{problem.task}</p><div className="query-rules">Return columns in the requested order. Column aliases are flexible.</div></div><div className="schema-heading">EXPLORE THE DATA <span>PUBLIC SAMPLE</span></div>{problem.tables?.map(t => <details className="schema-card" key={t.name} open><summary><Glyph type="db"/> {t.name}<span>{t.columns.length} columns</span></summary><ResultTable columns={t.columns} rows={t.rows}/></details>)}<details className="schema-ddl"><summary>View table definitions</summary><pre>{problem.schema.join(';\n\n')};</pre></details></div>

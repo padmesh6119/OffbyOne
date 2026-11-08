@@ -46,6 +46,8 @@ export const api = {
   sqlSubmit: (slug, query) => req(`/api/sql-problems/${slug}/submit`, { method: 'POST', body: JSON.stringify({ query }) }),
   profile: (username) => req(`/api/users/${username}/profile`),
   rivals: (username) => req(`/api/users/${username}/rivals`),
+  practiceHub: () => req('/api/practice-hub'),
+  standings: () => req('/api/practice-hub/leaderboard'),
   streak: () => req('/api/streak'),
   dailyChallenge: () => req('/api/daily-challenge'),
 };

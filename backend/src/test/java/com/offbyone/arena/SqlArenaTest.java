@@ -110,4 +110,26 @@ class SqlArenaTest {
    assertTrue(submissions.findByUserId(a.getId()).stream().anyMatch(s -> "accepted".equals(s.getVerdict())));
  }
 
+ @Test void practiceHubRewardsDistinctSolvesAndProtectsQueryHistory() throws Exception {
+   a.setSessionExpiresAt(LocalDateTime.now(ZoneOffset.UTC).plusHours(1));users.save(a);
+   b.setSessionExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusMinutes(1));users.save(b);
+   for(int i=0;i<3;i++){var s=new Submission();s.setUser(a);s.setLanguage("sql");s.setSqlSlug("sql-student-names");s.setCode("SELECT name FROM students");s.setVerdict("accepted");submissions.save(s);}
+   var expired=new Submission();expired.setUser(b);expired.setLanguage("sql");expired.setSqlSlug("sql-student-cities");expired.setCode("SELECT name,city FROM students");expired.setVerdict("accepted");submissions.save(expired);
+   String auth="Bearer "+jwt.generate(a.getEmail());
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/practice-hub").header("Authorization",auth))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.xp").value(100))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.firstTry").value(1))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.solved.length()").value(1))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.daily.difficulty").value("easy"));
+   var standings=http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/practice-hub/leaderboard").header("Authorization",auth))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andReturn().getResponse().getContentAsString();
+   assertTrue(standings.contains(a.getUsername())); assertFalse(standings.contains(b.getUsername()));
+   var own=submissions.findByUserId(a.getId()).get(0);
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/submissions/"+own.getId()).header("Authorization",auth))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.code").value("SELECT name FROM students"));
+   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/submissions/"+own.getId()).header("Authorization","Bearer "+jwt.generate(outsider.getEmail())))
+    .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+ }
+
 }

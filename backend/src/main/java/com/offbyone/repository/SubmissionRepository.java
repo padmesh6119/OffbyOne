@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 public interface SubmissionRepository extends JpaRepository<Submission, UUID> {
+    @org.springframework.data.jpa.repository.Query("select distinct s.user.id, s.user.username, s.sqlSlug from Submission s where s.language = 'sql' and s.verdict = 'accepted' and s.user.sessionExpiresAt > :now")
+    List<Object[]> activeGuestSolves(@org.springframework.data.repository.query.Param("now") java.time.LocalDateTime now);
     List<Submission> findByUserId(UUID userId);
     List<Submission> findByProblemId(UUID problemId);
     List<Submission> findByRoomId(UUID roomId);

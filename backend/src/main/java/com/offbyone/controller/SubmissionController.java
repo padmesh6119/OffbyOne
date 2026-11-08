@@ -88,8 +88,12 @@ public class SubmissionController {
 
     @GetMapping("/{id}")
     @Transactional(readOnly = true)
-    public ResponseEntity<?> get(@PathVariable UUID id) {
-        return submissionRepo.findById(id).map(s -> ResponseEntity.ok(toDto(s))).orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> get(@PathVariable UUID id, @AuthenticationPrincipal User user) {
+        return submissionRepo.findById(id).filter(s -> s.getUser().getId().equals(user.getId())).map(s -> {
+            var dto = toDto(s);
+            dto.put("code", s.getCode());
+            return ResponseEntity.ok(dto);
+        }).orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/my")
@@ -102,7 +106,7 @@ public class SubmissionController {
         Map<String, Object> dto = new java.util.HashMap<>();
         dto.put("id", s.getId());
         dto.put("problemSlug", s.getProblem() != null ? s.getProblem().getSlug() : s.getSqlSlug());
-        dto.put("problemTitle", s.getProblem() != null ? s.getProblem().getTitle() : s.getSqlSlug());
+        dto.put("problemTitle", s.getProblem() != null ? s.getProblem().getTitle() : sqlProblemBank.findBySlug(s.getSqlSlug()).map(SqlProblem::title).orElse(s.getSqlSlug()));
         dto.put("language", s.getLanguage());
         dto.put("verdict", s.getVerdict());
         dto.put("runtimeMs", s.getRuntimeMs());

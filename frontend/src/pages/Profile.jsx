@@ -1,17 +1,24 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api, errorMessage } from '../lib/api';
+import { PlayerLevel } from '../components/PracticeHub';
+import SubmissionHistory from '../components/SubmissionHistory';
 export default function Profile() {
   const username=localStorage.getItem('username');
   const [data,setData]=useState(null),[error,setError]=useState('');
-  useEffect(()=>{let live=true;Promise.all([api.profile(username),api.rivals(username),api.streak(),api.mySubmissions()]).then(([profile,rivals,streak,attempts])=>live&&setData({profile,rivals,streak,attempts})).catch(e=>live&&setError(errorMessage(e)));return()=>{live=false;};},[username]);
+  useEffect(()=>{let live=true;Promise.all([api.profile(username),api.rivals(username),api.streak(),api.mySubmissions(),api.practiceHub()]).then(([profile,rivals,streak,attempts,hub])=>live&&setData({profile,rivals,streak,attempts,hub})).catch(e=>live&&setError(errorMessage(e)));return()=>{live=false;};},[username]);
   if(error)return <div className="arena-error" role="alert">{error}</div>;
   if(!data)return <div className="arena-loading">Loading your progress…</div>;
-  const {profile:p,rivals,streak,attempts}=data;
+  const {profile:p,rivals,streak,attempts,hub}=data;
   const sqlAttempts=attempts.filter(a => a.language === 'sql');
-  const recent=[...sqlAttempts].sort((a,b)=>b.submittedAt.localeCompare(a.submittedAt)).slice(0,8);
   return <section className="workspace-page"><div className="page-intro"><div><div className="arena-eyebrow">YOUR PLAYER CARD</div><h1>Every attempt<br/><em>moves you forward.</em></h1><p>{username}, this is the work you have put in.</p></div><div className="profile-monogram">{username[0].toUpperCase()}<span>OFFBYONE / PLAYER</span></div></div>
+    <PlayerLevel data={hub}/>
+    <section className="achievement-section"><div className="section-heading"><h2>A little proof of progress.</h2><span className="hub-muted">{hub.badges.filter(b=>b.unlocked).length} / {hub.badges.length} unlocked</span></div><div className="achievement-grid">{hub.badges.map((b,i)=><article className={`achievement ${b.unlocked?'unlocked':''}`} key={b.id}><span className="achievement-icon" aria-hidden="true">{b.unlocked?['↗','Ⅴ','Ⅹ','◎','⋈','☀'][i]:'◇'}</span><div><small>{b.unlocked?'UNLOCKED':'IN PROGRESS'}</small><h3>{b.title}</h3><p>{b.description}</p></div></article>)}</div></section>
     <div className="progress-stats">{[[p.solvedSql,'SQL CHALLENGES SOLVED'],[sqlAttempts.length,'SQL ATTEMPTS'],[p.wins+' – '+p.losses,'MATCH WINS / LOSSES'],[streak.currentStreak,'DAY STREAK']].map(([n,label])=><div key={label}><small>{label}</small><strong>{n}</strong></div>)}</div>
-    <div className="progress-columns"><section><div className="section-heading"><h2>Your recent attempts</h2><span className="arena-eyebrow">KEEP SHOWING UP</span></div>{recent.length?<div className="activity-list">{recent.map(a=><div className="activity-row" key={a.id}><span className={'activity-mark '+(a.verdict==='accepted'?'passed':'')}>{a.verdict==='accepted'?'✓':'↗'}</span><div><strong>{a.problemTitle}</strong><small>{a.language.toUpperCase()} · {new Date(a.submittedAt).toLocaleString()}</small></div><span className={a.verdict==='accepted'?'accepted-label':'attempt-label'}>{a.verdict.replaceAll('_',' ')}</span></div>)}</div>:<div className="workspace-empty"><strong>Your first attempt belongs here.</strong><p>Pick a challenge and make your first move.</p><Link className="arena-primary" to="/">Enter the arena ↗</Link></div>}</section><aside className="arena-playbook"><div className="arena-eyebrow">FAMILIAR COMPETITION</div><h3>Your rivals.</h3>{rivals.length?rivals.map(r=><div className="rival-row" key={r.username}><strong>{r.username}</strong><span>{r.wins} W · {r.losses} L</span></div>):<p className="workspace-copy">The best rivals make you better. Invite a friend and your match history will appear here.</p>}<div className="playbook-note">Longest streak: {streak.longestStreak} days<br/>{streak.solvedToday?'You have solved a challenge today.':'A fresh solve keeps your streak going.'}<br/>SQL arena matches are friendly and do not change Elo.</div><Link className="arena-secondary" to="/">Challenge a friend ↗</Link></aside></div>
+    <div className="progress-columns"><SubmissionHistory attempts={sqlAttempts}/><aside className="arena-playbook"><div className="arena-eyebrow">FAMILIAR COMPETITION</div><h3>Your rivals.</h3>{rivals.length?rivals.map(r=><div className="rival-row" key={r.username}><strong>{r.username}</strong><span>{r.wins} W · {r.losses} L</span></div>):<p className="workspace-copy">The best rivals make you better. Invite a friend and your match history will appear here.</p>}<div className="playbook-note">Longest streak: {streak.longestStreak} days<br/>{streak.solvedToday?'You have solved a challenge today.':'A fresh solve keeps your streak going.'}<br/>SQL arena matches are friendly and do not change Elo.</div><Link className="arena-secondary" to="/">Challenge a friend ↗</Link><div className="progress-export"><h4>Take your progress with you.</h4><p>Your stats belong to this 24 hour guest pass. Download a personal record before it expires. This snapshot cannot extend or restore a pass.</p><button className="arena-secondary" onClick={()=>{
+      const snapshot={username,exportedAt:new Date().toISOString(),...hub,profile:p,attempts:sqlAttempts};
+      const url=URL.createObjectURL(new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}));
+      const a=document.createElement('a');a.href=url;a.download=`offbyone-${username}-progress.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }}>Download progress ↓</button></div></aside></div>
   </section>;
 }

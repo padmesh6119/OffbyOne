@@ -17,10 +17,10 @@ import java.util.*;
 @RequestMapping("/api")
 public class StreakController {
     private final SubmissionRepository submissionRepo;
-    private final ProblemRepository problemRepo;
+    private final com.offbyone.sql.SqlProblemBank bank;
 
-    public StreakController(SubmissionRepository submissionRepo, ProblemRepository problemRepo) {
-        this.submissionRepo = submissionRepo; this.problemRepo = problemRepo;
+    public StreakController(SubmissionRepository submissionRepo, com.offbyone.sql.SqlProblemBank bank) {
+        this.submissionRepo = submissionRepo; this.bank = bank;
     }
 
     /** Current/longest streak of distinct days with at least one accepted submission. */
@@ -28,11 +28,11 @@ public class StreakController {
     @Transactional(readOnly = true)
     public Map<String, Object> streak(@AuthenticationPrincipal User user) {
         List<LocalDate> days = submissionRepo.findByUserId(user.getId()).stream()
-                .filter(s -> "accepted".equals(s.getVerdict()))
+                .filter(s -> "sql".equals(s.getLanguage()) && "accepted".equals(s.getVerdict()))
                 .map(s -> s.getSubmittedAt().toLocalDate())
                 .distinct().sorted(Comparator.reverseOrder()).toList();
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(java.time.ZoneOffset.UTC);
         boolean solvedToday = !days.isEmpty() && days.get(0).equals(today);
 
         int current = 0;
@@ -59,11 +59,9 @@ public class StreakController {
     @GetMapping("/daily-challenge")
     @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> dailyChallenge() {
-        List<Problem> all = problemRepo.findByIsActiveTrue().stream()
-                .sorted(Comparator.comparing(Problem::getSlug)).toList();
-        if (all.isEmpty()) return ResponseEntity.noContent().build();
-        long epochDay = LocalDate.now().toEpochDay();
-        Problem p = all.get((int) Math.floorMod(epochDay, all.size()));
-        return ResponseEntity.ok(Map.of("slug", p.getSlug(), "title", p.getTitle(), "difficulty", p.getDifficulty()));
+        var all = bank.findAll().stream().filter(p -> "easy".equals(p.difficulty()))
+                .sorted(Comparator.comparing(com.offbyone.sql.SqlProblem::slug)).toList();
+        var p = all.get((int) Math.floorMod(LocalDate.now(java.time.ZoneOffset.UTC).toEpochDay(), all.size()));
+        return ResponseEntity.ok(Map.of("slug", p.slug(), "title", p.title(), "difficulty", p.difficulty()));
     }
 }

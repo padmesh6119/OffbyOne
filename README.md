@@ -64,3 +64,15 @@ Arena transitions use a pessimistic database row lock, so competing requests can
 SQL uses fresh in-memory databases, read-only query restrictions, instruction/time budgets, result size limits and a four-query concurrency cap. These are resource controls within the API process, not a separate OS sandbox. Validate production PostgreSQL behavior and capacity before a public launch. Rate limiting for the new SQL endpoints is per application instance. Current guest accounts and known problem banks are suitable for friendly competition, not high-stakes ranked assessment.
 
 The original `tools/gen_sql_bank.py` is a historical sample-bank generator. Do not use it to replace the curated bank: it does not generate hidden datasets or match explanations. Author and validate additions in `backend/src/main/resources/sql-problems.json`.
+
+
+### Practice and progression
+
+- Daily SQL challenge: the same beginner friendly problem for everyone, rotating at midnight UTC.
+- Four guided learning paths with completion tracking and a next challenge.
+- XP for distinct SQL solves (100 easy, 200 medium, 350 hard), levels every 500 XP, and six achievement badges. Repeating a problem does not award extra XP.
+- Standings for active guest passes, with tied XP sharing a rank. Expired passes disappear from standings.
+- My Progress includes a searchable query notebook, private submission review, query restore in the editor, and a downloadable JSON progress snapshot.
+- Challenge links survive refresh. Guest passes still expire after 24 hours; an exported snapshot is a personal record, not a login or pass restore mechanism.
+
+These features use existing SQL submissions and the existing database; they require no additional service, migration, or paid API.
