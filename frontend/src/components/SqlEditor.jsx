@@ -17,8 +17,8 @@ export default function SqlEditor({ value, onChange, onRun, readOnly, language =
         rules: [{ token: 'keyword', foreground: 'FFAD8F' }, { token: 'comment', foreground: '858F95' }, { token: 'string', foreground: 'B5DDBD' }],
         colors: { 'editor.background': '#1B1E21', 'editor.foreground': '#E2E6E5', 'editorLineNumber.foreground': '#727C82', 'editorLineNumber.activeForeground': '#FF916E', 'editor.lineHighlightBackground': '#24282C', 'editor.selectionBackground': '#FF916E28', 'editorCursor.foreground': '#FF916E' } });
       instance.editor.defineTheme('offbyone-light', { base: 'vs', inherit: true,
-        rules: [{ token: 'keyword', foreground: '2854D7' }, { token: 'comment', foreground: '73796C' }, { token: 'string', foreground: '34744B' }],
-        colors: { 'editor.background': '#FFFEFA', 'editor.foreground': '#202B43', 'editorLineNumber.foreground': '#8A908B', 'editorLineNumber.activeForeground': '#2854D7', 'editor.lineHighlightBackground': '#F1F3FA', 'editor.selectionBackground': '#2854D725', 'editorCursor.foreground': '#2854D7' } });
+        rules: [{ token: 'keyword', foreground: '3C563B' }, { token: 'comment', foreground: '73796C' }, { token: 'string', foreground: '34744B' }],
+        colors: { 'editor.background': '#FCF9EF', 'editor.foreground': '#302E25', 'editorLineNumber.foreground': '#8A908B', 'editorLineNumber.activeForeground': '#3C563B', 'editor.lineHighlightBackground': '#EDF0E0', 'editor.selectionBackground': '#3C563B25', 'editorCursor.foreground': '#3C563B' } });
     }}
     onMount={editor => {
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => run.current?.(false));

@@ -70,3 +70,11 @@
 @media(max-width:1250px) {.hero-copy h1 {font-size:48px;}.arena-overview small {font-size:11px;}.learning-path>small {font-size:10px;}.challenge-name strong {font-size:13px;}.art-code {font-size:10px;padding-inline:14px;}.hero-facts {font-size:10px;}}
 .arena-footer>span.footer-links {display:flex;font:12px Inter,sans-serif;}
 .settings-card>.arena-eyebrow,.draft-manager .arena-eyebrow {font:12px Inter,sans-serif;letter-spacing:0;}
+.brand-home {display:flex;align-items:center;padding:0 10px;}
+.club-sidebar .brand-home .workspace-brand {padding:0;}
+.creator-secret {display:inline-flex;justify-content:flex-start;align-items:center;background:none;border:0;padding:0;min-width:25px;min-height:34px;color:var(--accent);font:700 28px var(--display);letter-spacing:-1px;cursor:pointer;position:relative;}
+.creator-secret>span {transition:transform .2s;}
+.creator-secret:hover>span {transform:translateY(-2px);}
+.creator-secret[data-step="1"]>span {text-shadow:0 0 8px currentColor;}
+.creator-secret[data-step="2"]>span {transform:scale(1.4);text-shadow:0 0 12px currentColor;}
+@media(max-width:1250px) {.brand-home {padding-inline:5px;}.creator-secret {min-width:18px;}}

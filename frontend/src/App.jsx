@@ -1,3 +1,5 @@
+import CreatorSecret from './components/CreatorSecret';
+import Creators from './pages/Creators';
 import BrandMark from './components/BrandMark';
 import { useEffect, useState } from 'react';
 import { ThemeProvider, ThemeToggle } from './theme';
@@ -55,7 +57,7 @@ function Workspace() {
   return <div className="sql-app workspace">
     <a className="skip-link" href="#workspace-main">Skip to content</a>
     <aside className="club-sidebar">
-      <NavLink to="/" className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone<span className="brand-period">.</span></NavLink>
+      <div className="brand-home"><NavLink to="/" className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone</NavLink><CreatorSecret/></div>
       <nav aria-label="Main navigation" className="club-nav">
         <NavLink to="/" end><Icon name="arena"/>SQL Arena<span className="nav-active-dot"/></NavLink>
         <NavLink to="/profile"><Icon name="progress"/>My Progress</NavLink>
@@ -82,6 +84,7 @@ function ArenaAlias() { const { search } = useLocation(); return <Navigate to={'
 export default function App() {
   return <AppBoundary><ThemeProvider><PreferencesProvider><HashRouter><Routes>
     <Route path="/join" element={<Join />} />
+    <Route path="/creators" element={<Creators />} />
     <Route element={<Workspace />}>
       <Route index element={<SqlArena />} />
       <Route path="/profile" element={<Profile />} />

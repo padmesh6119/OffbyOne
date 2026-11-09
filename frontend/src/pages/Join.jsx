@@ -1,3 +1,4 @@
+import CreatorSecret from '../components/CreatorSecret';
 import BrandMark from '../components/BrandMark';
 import ArenaVisual from '../components/ArenaVisual';
 import { ThemeToggle } from '../theme';
@@ -24,7 +25,7 @@ export default function Join() {
     } catch (e) { setError(errorMessage(e)); setBusy(false); }
   }
   return <div className="sql-app entry-page">
-    <div className="entry-story"><div className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone<span className="brand-period">.</span></div>
+    <div className="entry-story"><div className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone<CreatorSecret/></div>
       <div className="entry-pitch"><h1>Bring your<br/>best <em>query.</em></h1><p>Two minds. One dataset.<br/>Find your edge, one duel at a time.</p></div><ArenaVisual/>
     </div>
     <section className="entry-form-panel"><ThemeToggle/><h2>Ready to<br/>make your move?</h2><p>No account needed. Pick a temporary name and your SQL level.</p>
