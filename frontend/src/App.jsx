@@ -53,23 +53,16 @@ function Workspace() {
   }, [token, retry]);
   if (!token && location.pathname !== '/help') return <Navigate to="/join" state={{ from: location.pathname + location.search }} replace />;
   const remaining = Math.max(0, Math.ceil((Date.parse(localStorage.getItem('expiresAt')) - now) / 1000));
-  const section = { '/profile': 'YOUR PROGRESS', '/leaderboard': 'THE STANDINGS', '/settings': 'YOUR SETTINGS', '/help': 'THE BRIEFING' }[location.pathname] || 'THE ARENA';
   return <div className="sql-app workspace">
     <a className="skip-link" href="#workspace-main">Skip to content</a>
-    <aside className="club-sidebar">
+    <header className="site-header">
       <div className="brand-home"><NavLink to="/" className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone</NavLink><CreatorSecret/></div>
       <nav aria-label="Main navigation" className="club-nav">
         <NavLink to="/" end><Icon name="arena"/>SQL Arena<span className="nav-active-dot"/></NavLink>
         <NavLink to="/profile"><Icon name="progress"/>My Progress</NavLink>
         <NavLink to="/leaderboard"><Icon name="trophy"/>Standings</NavLink>
       </nav>
-      <div className="sidebar-bottom">
-        <nav className="club-nav" aria-label="Resources"><NavLink to="/settings"><Icon name="settings"/>Settings & drafts</NavLink><NavLink to="/help"><Icon name="help"/>Help & shortcuts</NavLink></nav>
-      </div>
-    </aside>
-    <header className="site-header">
-      <div className="header-title"><strong>{section === 'THE ARENA' ? 'SQL Arena' : section === 'YOUR PROGRESS' ? 'My Progress' : section === 'THE STANDINGS' ? 'Standings' : section === 'YOUR SETTINGS' ? 'Settings & drafts' : 'Help & shortcuts'}</strong></div>
-      <div className="header-account"><ThemeToggle/>{token ? <PlayerMenu/> : <NavLink className="arena-secondary" to="/join">Get a guest pass ↗</NavLink>}</div>
+      <div className="header-account"><NavLink className="header-settings" to="/settings" aria-label="Settings & drafts" title="Settings & drafts"><Icon name="settings"/></NavLink><ThemeToggle/>{token ? <PlayerMenu/> : <NavLink className="arena-secondary" to="/join">Start playing ↗</NavLink>}</div>
     </header>
     <main className="workspace-main" id="workspace-main" tabIndex="-1">
       {!online && <div className="connection-banner" role="status">You are offline. Your open query stays here. Reconnect before running or submitting.</div>}

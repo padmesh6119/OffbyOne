@@ -14,11 +14,11 @@ export default function SqlEditor({ value, onChange, onRun, readOnly, language =
   return <Editor height="clamp(280px, calc(100vh - 580px), 520px)" language={language} theme={theme === 'light' ? 'offbyone-light' : 'offbyone-dark'} value={value} onChange={onChange}
     beforeMount={instance => {
       instance.editor.defineTheme('offbyone-dark', { base: 'vs-dark', inherit: true,
-        rules: [{ token: 'keyword', foreground: 'FFAD8F' }, { token: 'comment', foreground: '858F95' }, { token: 'string', foreground: 'B5DDBD' }],
-        colors: { 'editor.background': '#1B1E21', 'editor.foreground': '#E2E6E5', 'editorLineNumber.foreground': '#727C82', 'editorLineNumber.activeForeground': '#FF916E', 'editor.lineHighlightBackground': '#24282C', 'editor.selectionBackground': '#FF916E28', 'editorCursor.foreground': '#FF916E' } });
+        rules: [{ token: 'keyword', foreground: 'D8FC86' }, { token: 'comment', foreground: '919D87' }, { token: 'string', foreground: 'C8D9A9' }],
+        colors: { 'editor.background': '#1C201C', 'editor.foreground': '#EFF3E7', 'editorLineNumber.foreground': '#7E8977', 'editorLineNumber.activeForeground': '#D8FC86', 'editor.lineHighlightBackground': '#282E26', 'editor.selectionBackground': '#D8FC8628', 'editorCursor.foreground': '#D8FC86' } });
       instance.editor.defineTheme('offbyone-light', { base: 'vs', inherit: true,
-        rules: [{ token: 'keyword', foreground: '3C563B' }, { token: 'comment', foreground: '73796C' }, { token: 'string', foreground: '34744B' }],
-        colors: { 'editor.background': '#FCF9EF', 'editor.foreground': '#302E25', 'editorLineNumber.foreground': '#8A908B', 'editorLineNumber.activeForeground': '#3C563B', 'editor.lineHighlightBackground': '#EDF0E0', 'editor.selectionBackground': '#3C563B25', 'editorCursor.foreground': '#3C563B' } });
+        rules: [{ token: 'keyword', foreground: '38552A' }, { token: 'comment', foreground: '6F7A65' }, { token: 'string', foreground: '59722B' }],
+        colors: { 'editor.background': '#F9FBF2', 'editor.foreground': '#242D20', 'editorLineNumber.foreground': '#88927D', 'editorLineNumber.activeForeground': '#38552A', 'editor.lineHighlightBackground': '#EAF0DF', 'editor.selectionBackground': '#38552A25', 'editorCursor.foreground': '#38552A' } });
     }}
     onMount={editor => {
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => run.current?.(false));

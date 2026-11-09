@@ -15,7 +15,8 @@ export function PlayerLevel({ data }) {
   return <div className="player-level"><span className="level-number">{data.level}<small>LEVEL</small></span><div><div className="level-caption"><strong>{data.xp.toLocaleString()} XP</strong><span>{500 - data.levelProgress} XP to level {data.level + 1}</span></div><progress aria-label="Progress to next level" value={data.levelProgress} max="500"/><small>First solve: easy +100 · medium +200 · hard +350 XP</small></div></div>;
 }
 
-export default function PracticeHub({ bank, solved, busy, onOpen }) {
+export default function PracticeHub({ bank, solved, busy, onOpen, children, library }) {
+  const [view, setView] = useState('challenges');
   const [data, setData] = useState(null), [error, setError] = useState(''), [now, setNow] = useState(Date.now());
   const [reload, setReload] = useState(0);
   useEffect(() => {
@@ -31,17 +32,33 @@ export default function PracticeHub({ bank, solved, busy, onOpen }) {
   }, [data?.daily.resetsAt]);
   const remaining = data ? Math.max(0, Math.floor((Date.parse(data.daily.resetsAt) - now) / 1000)) : 0;
   const countdown = `${String(Math.floor(remaining / 3600)).padStart(2, '0')}:${String(Math.floor(remaining / 60) % 60).padStart(2, '0')}:${String(remaining % 60).padStart(2, '0')}`;
-  return <section className="practice-hub" aria-label="Daily challenge and learning paths">
-    <div className="section-heading"><div><h2>Practice & progress</h2></div><Link className="arena-text-link" to="/leaderboard">See the standings ↗</Link></div>
-    {error ? <div className="hub-notice" role="alert">{error} <button onClick={() => setReload(n => n + 1)}>Try again</button></div> : !data ? <p className="hub-muted" role="status">Loading your daily challenge…</p> : <div className="hub-feature-grid">
-      <Reveal as="article" className={`daily-card ${data.daily.completed ? 'daily-cleared' : ''}`}><div className="daily-top"><span className="arena-eyebrow">{data.daily.completed ? '✓ Daily completed' : 'Daily challenge'}</span><span className="daily-countdown" title="Resets at midnight UTC">{countdown} <small>until reset</small></span></div><h3>{data.daily.title}</h3><p>A fresh beginner-friendly challenge, every day.</p><button className="arena-primary" disabled={busy} onClick={() => onOpen(data.daily)}>{data.daily.completed ? 'Play it again ↗' : 'Take the daily challenge →'}</button></Reveal>
-      <Reveal as="article" delay={90} className="session-card"><h3 className="session-title">Your progress</h3><PlayerLevel data={data}/><div className="session-mini-stats"><span><strong>{data.solved.length}</strong> unique solves</span><span><strong>{data.firstTry}</strong> first try clears</span><span><strong>{data.badges.filter(b => b.unlocked).length}/{data.badges.length}</strong> badges</span></div><Link to="/profile" className="arena-text-link">Open your player card ↗</Link></Reveal>
+  return <>
+    <div className="play-grid">
+      {children}
+      <article className={`daily-card ${data?.daily.completed ? 'daily-cleared' : ''}`} aria-label="Daily challenge">
+        <div className="daily-top"><span>{data?.daily.completed ? '✓ Daily completed' : 'Daily challenge'}</span><Icon name="code" size={24}/></div>
+        <div className="daily-emblem" aria-hidden="true"><span>✳</span></div>
+        {error ? <div className="hub-notice" role="alert">{error} <button onClick={() => setReload(n => n + 1)}>Try again</button></div> : !data ? <p className="daily-loading" role="status">Loading your daily challenge…</p> : <>
+          <h2>{data.daily.title}</h2><p>A fresh start. One good query.</p>
+          <button className="arena-primary" disabled={busy} onClick={() => onOpen(data.daily)}>{data.daily.completed ? 'Play it again' : 'Take the challenge'} <span aria-hidden="true">↗</span></button>
+          <span className="daily-countdown" title="Resets at midnight UTC">Next challenge in {countdown}</span>
+        </>}
+      </article>
+    </div>
+    {data && <div className="session-card" aria-label="Your progress">
+      <PlayerLevel data={data}/><div className="session-mini-stats"><span><strong>{data.solved.length}</strong> solved</span><span><strong>{data.badges.filter(b => b.unlocked).length}/{data.badges.length}</strong> badges</span></div><Link to="/profile" className="arena-text-link">My progress ↗</Link>
     </div>}
-    <div className="paths-heading"><h3>Learning paths</h3></div>
-    <div className="learning-paths">{paths.map((path, index) => {
-      const missions = bank.filter(path.match), done = missions.filter(p => solved.has(p.slug)).length;
-      const next = missions.find(p => !solved.has(p.slug)) || missions[0];
-      return <Reveal as="article" className="learning-path" delay={index * 65} key={path.title}><div className="path-top"><span className="path-icon"><Icon name={["code", "chart", "join", "layers"][index]} size={24}/></span><span className="path-index">0{index + 1}</span></div><h3>{path.title}</h3><p>{path.description}</p><progress aria-label={`${path.title} completion`} value={done} max={missions.length || 1}/><div className="path-progress"><span>{done} / {missions.length} cleared</span><strong>{missions.length && done === missions.length ? '✓ Complete' : `${missions.length ? Math.round(done / missions.length * 100) : 0}%`}</strong></div><button className="arena-secondary" disabled={busy || !next} onClick={() => onOpen(next)}>{done === missions.length && next ? 'Revisit path ↗' : done ? 'Continue path →' : 'Start path →'}</button>{next && <small>Next: {next.title}</small>}</Reveal>;
-    })}</div>
-  </section>;
+    <section className="practice-hub" id="practice" aria-label="Practice challenges and learning paths">
+      <div className="practice-browser-heading"><h2>Build your edge.</h2><div className="practice-view" role="group" aria-label="Practice view"><button aria-pressed={view === 'challenges'} onClick={() => setView('challenges')}>All challenges</button><button aria-pressed={view === 'paths'} onClick={() => setView('paths')}>Learning paths</button></div></div>
+      <div hidden={view !== 'challenges'}>{library}</div>
+      <div hidden={view !== 'paths'}>
+        <div className="paths-heading"><h3>One skill at a time.</h3><p>Pick a path. We’ll find your next challenge.</p></div>
+        <div className="learning-paths">{paths.map((path, index) => {
+          const missions = bank.filter(path.match), done = missions.filter(p => solved.has(p.slug)).length;
+          const next = missions.find(p => !solved.has(p.slug)) || missions[0];
+          return <Reveal as="article" className="learning-path" delay={index * 65} key={path.title}><div className="path-top"><span className="path-icon"><Icon name={["code", "chart", "join", "layers"][index]} size={28}/></span><span className="path-index">0{index + 1}</span></div><h3>{path.title}</h3><p>{path.description}</p><progress aria-label={`${path.title} completion`} value={done} max={missions.length || 1}/><div className="path-progress"><span>{done} / {missions.length} cleared</span><strong>{missions.length && done === missions.length ? '✓ Complete' : `${missions.length ? Math.round(done / missions.length * 100) : 0}%`}</strong></div><button className="arena-secondary" disabled={busy || !next} onClick={() => onOpen(next)}>{done === missions.length && next ? 'Revisit path ↗' : done ? 'Continue path →' : 'Start path →'}</button>{next && <small>Next: {next.title}</small>}</Reveal>;
+        })}</div>
+      </div>
+    </section>
+  </>;
 }

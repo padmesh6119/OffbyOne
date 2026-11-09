@@ -1,80 +1,9 @@
-/* Quiet chrome, readable information, and room around the main action. */
-.club-sidebar>.club-nav {margin-top:45px;}
-.sidebar-bottom {padding-top:24px;}
-.site-header {height:72px;}
-.header-title {font-size:14px;}
-.workspace-main {padding-top:30px;}
-.arena-hero {min-height:390px;}
-.hero-copy h1 {margin-top:0;}
-.hero-copy>p {font-size:14px;max-width:330px;}
-.hero-facts {font:11px Inter,sans-serif;}
-.hero-facts b {font-size:14px;}
-.hero-buttons .arena-text-link {font-size:12px;}
-.arena-overview {grid-template-columns:repeat(3,1fr);}
-.arena-overview small {font-size:12px;}
-.arena-overview>div {padding-left:24px;}
-.arena-overview>div:last-child {border-right:0;}
-.query-art-header {padding:18px;}
-.query-art-header strong {font-size:15px;}
-.art-code {font-size:11px;padding:22px 18px;gap:12px;}
-.art-code>span {font-size:9px;}
-.query-art-you {top:50px;}
-.query-art-rival {bottom:40px;}
-.session-title {font:500 17px var(--display);margin-bottom:23px;}
-.daily-card .arena-eyebrow {font:500 13px Inter,sans-serif;letter-spacing:0;}
-.daily-countdown small {font:11px Inter,sans-serif;letter-spacing:0;}
-.daily-card p {font-size:13px;}
-.hub-footnote {font-size:11px;}
-.session-mini-stats {font-size:12px;}
-.player-level>div>small {font-size:10px;}
-.learning-path p {font-size:12px;}
-.learning-path>small {font:11px/1.7 Inter,sans-serif;}
-.path-progress {font-size:11px;}
-.learning-path .arena-secondary {font-size:12px;}
-.path-top {margin-bottom:12px;}
-.paths-heading .hub-muted {font-size:12px;}
-.path-index {font-size:22px;}
-.section-heading {margin-bottom:22px;}
-.library-count {font:12px Inter,sans-serif;}
-.library-tools input,.difficulty-tabs button {font-size:12px;}
-.challenge-name strong {font-size:14px;}
-.challenge-name small {font:11px Inter,sans-serif;}
-.challenge-number {font-size:11px;}
-.practice-filters label,.practice-filters>span {font-size:11px;}
-.arena-difficulty {font-size:10px;}
-.panel-title {font:12px Inter,sans-serif;}
-.panel-title>.editor-language {font-size:11px;}
-.schema-heading {font:12px Inter,sans-serif;letter-spacing:0;}
-.challenge-description>.arena-eyebrow {font:11px Inter,sans-serif;letter-spacing:0;}
-.challenge-description p {font-size:14px;}
-.query-rules {font-size:12px;}
-.schema-card summary {font-size:12px;}
-.sql-result-table {font-size:12px;}
-.schema-card summary>span {font-size:10px;}
-.editor-utilities {justify-content:flex-end;}
-.editor-utilities button,.editor-utilities a {font:11px Inter,sans-serif;}
-.editor-actions>span {font:10px Inter,sans-serif;}
-.editor-actions button {font-size:12px;}
-.arena-empty p {font-size:12px;}
-.output-panel .panel-title {font-size:12px;}
-.arena-playbook h3 {font-size:25px;line-height:1.25;margin-top:0;}
-.playbook-note {font:11px/1.8 Inter,sans-serif;}
-.bookmark-note {font-size:11px;}
-.arena-footer {font:12px Inter,sans-serif;letter-spacing:0;}
-.arena-footer>span:first-child {font:600 17px var(--display);color:var(--muted);letter-spacing:-.6px;}
-.entry-pitch {margin-top:65px;}
-.entry-form-panel form label {font:500 13px Inter,sans-serif;letter-spacing:0;}
+/* Essential controls stay readable; the secret remains part of the wordmark. */
+.arena-eyebrow {font-size:11px;letter-spacing:1px;line-height:1.7;}
 .achievement small {font:10px Inter,sans-serif;letter-spacing:.3px;}
-.achievement p {font-size:12px;}
-@media(min-width:1600px) {.arena-hero {min-height:420px;}}
-@media(max-width:1250px) {.hero-copy h1 {font-size:48px;}.arena-overview small {font-size:11px;}.learning-path>small {font-size:10px;}.challenge-name strong {font-size:13px;}.art-code {font-size:10px;padding-inline:14px;}.hero-facts {font-size:10px;}}
-.arena-footer>span.footer-links {display:flex;font:12px Inter,sans-serif;}
 .settings-card>.arena-eyebrow,.draft-manager .arena-eyebrow {font:12px Inter,sans-serif;letter-spacing:0;}
-.brand-home {display:flex;align-items:center;padding:0 10px;}
-.club-sidebar .brand-home .workspace-brand {padding:0;}
 .creator-secret {display:inline-flex;justify-content:flex-start;align-items:center;background:none;border:0;padding:0;min-width:25px;min-height:34px;color:var(--accent);font:700 28px var(--display);letter-spacing:-1px;cursor:pointer;position:relative;}
 .creator-secret>span {transition:transform .2s;}
 .creator-secret:hover>span {transform:translateY(-2px);}
 .creator-secret[data-step="1"]>span {text-shadow:0 0 8px currentColor;}
 .creator-secret[data-step="2"]>span {transform:scale(1.4);text-shadow:0 0 12px currentColor;}
-@media(max-width:1250px) {.brand-home {padding-inline:5px;}.creator-secret {min-width:18px;}}

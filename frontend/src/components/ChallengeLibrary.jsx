@@ -36,6 +36,6 @@ export default function ChallengeLibrary({ loading, loadError, onRetry, bank, so
       {pageCount > 1 && <nav className="library-pagination" aria-label="Challenge pages"><span>{page * 12 + 1}–{Math.min((page + 1) * 12, visible.length)} of {visible.length} challenges</span><div>{Array.from({ length: pageCount }, (_, n) => <button key={n} aria-label={`Challenge page ${n + 1}`} aria-current={page === n ? 'page' : undefined} onClick={() => changePage(n)}>{n + 1}</button>)}</div></nav>}
       <p className="bookmark-note">Bookmarks stay in this browser for your current guest pass. Random practice uses the filters above.</p>
     </div>
-    <aside className="arena-playbook"><h3>How duels work</h3>{[['01', 'Pick your opponent', 'Create a private duel. Send the invite to a friend.'], ['02', 'Secure the round', 'First correct query takes the point. Hidden datasets prevent lucky guesses.'], ['03', 'Review the tape', 'First to two wins. Study the solutions and run it back.']].map(([n, title, desc]) => <div className="playbook-step" key={n}><span>{n}</span><div><strong>{title}</strong><p>{desc}</p></div></div>)}<div className="playbook-note">SQLite dialect <span>•</span> Friendly competition<br/>Timeouts draw the round. Three rounds maximum.</div></aside>
+
   </section>;
 }
