@@ -4,8 +4,8 @@ import Icon from './Icon';
 import { api, errorMessage } from '../lib/api';
 
 export const paths = [
-  { title: 'Read the room', label: '01 / FOUNDATIONS', description: 'Select, filter and sort. Build confidence one query at a time.', match: p => p.difficulty === 'easy' && !['count', 'sum', 'max', 'min'].includes(p.pattern) },
-  { title: 'Make numbers talk', label: '02 / AGGREGATION', description: 'Turn rows into totals, groups and useful answers.', match: p => ['count', 'sum', 'max', 'min', 'group-by', 'having', 'date+group-by'].includes(p.pattern) },
+  { title: 'Read the room', label: '01 / FOUNDATIONS', description: 'Select, filter and sort. Build confidence one query at a time.', match: p => p.difficulty === 'easy' && !['count', 'sum', 'max', 'min', 'avg'].includes(p.pattern) },
+  { title: 'Make numbers talk', label: '02 / AGGREGATION', description: 'Turn rows into totals, groups and useful answers.', match: p => ['count', 'sum', 'max', 'min', 'avg', 'group-by', 'having', 'date+group-by'].includes(p.pattern) },
   { title: 'Better together', label: '03 / JOINS', description: 'Connect tables and find what is missing between them.', match: p => p.pattern.includes('join') },
   { title: 'Think in layers', label: '04 / ADVANCED', description: 'Rank results, nest queries and work with windows.', match: p => /subquery|ranking|window/.test(p.pattern) },
 ];

@@ -1596,5 +1596,1110 @@
     },
     "hint": "Use IS NULL to check for a missing value. Equality with NULL does not work like equality with a number.",
     "explanation": "WHERE phone IS NULL selects missing phone values. A blank string is still a stored value, so it is excluded."
+  },
+  {
+    "slug": "sql-student-ids",
+    "title": "Student IDs",
+    "difficulty": "easy",
+    "rating": 1060,
+    "pattern": "select",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return every student id. Any row order is accepted.",
+    "referenceQuery": "SELECT id FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "id"
+      ],
+      "rows": [
+        [
+          1
+        ],
+        [
+          2
+        ],
+        [
+          3
+        ],
+        [
+          4
+        ],
+        [
+          5
+        ]
+      ]
+    },
+    "hint": "Select the id column.",
+    "explanation": "Select the id column. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-student-scores",
+    "title": "Scores on Record",
+    "difficulty": "easy",
+    "rating": 1061,
+    "pattern": "select-columns",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return every student name and score, in that column order. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "score"
+      ],
+      "rows": [
+        [
+          "Anu",
+          72
+        ],
+        [
+          "Bala",
+          45
+        ],
+        [
+          "Chitra",
+          90
+        ],
+        [
+          "Dev",
+          50
+        ],
+        [
+          "Esha",
+          65
+        ]
+      ]
+    },
+    "hint": "Select two columns, separated by a comma.",
+    "explanation": "Select two columns, separated by a comma. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-madurai-students",
+    "title": "Madurai Students",
+    "difficulty": "easy",
+    "rating": 1062,
+    "pattern": "where-equals",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the names of students from Madurai. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city = 'Madurai'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Bala"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "Filter city using an equality condition.",
+    "explanation": "Filter city using an equality condition. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-not-chennai",
+    "title": "Outside Chennai",
+    "difficulty": "easy",
+    "rating": 1063,
+    "pattern": "where-equals",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return names of students whose city is not Chennai. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city <> 'Chennai'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Bala"
+        ],
+        [
+          "Dev"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "Use <> for not equal.",
+    "explanation": "Use <> for not equal. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-high-scores",
+    "title": "Scores Above 70",
+    "difficulty": "easy",
+    "rating": 1064,
+    "pattern": "where-number",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return names and scores of students scoring strictly above 70. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score FROM students WHERE score > 70",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "score"
+      ],
+      "rows": [
+        [
+          "Anu",
+          72
+        ],
+        [
+          "Chitra",
+          90
+        ]
+      ]
+    },
+    "hint": "Strictly above means > rather than >=.",
+    "explanation": "Strictly above means > rather than >=. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-low-scores",
+    "title": "Below the Passing Mark",
+    "difficulty": "easy",
+    "rating": 1065,
+    "pattern": "where-number",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return names of students with a score below 50. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE score < 50",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Bala"
+        ]
+      ]
+    },
+    "hint": "Use a less-than comparison.",
+    "explanation": "Use a less-than comparison. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-exact-score",
+    "title": "Exactly Fifty",
+    "difficulty": "easy",
+    "rating": 1066,
+    "pattern": "where-number",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return names of students with a score exactly equal to 50. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE score = 50",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Dev"
+        ]
+      ]
+    },
+    "hint": "Use = to match the exact score.",
+    "explanation": "Use = to match the exact score. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-score-at-most",
+    "title": "At Most Seventy",
+    "difficulty": "easy",
+    "rating": 1067,
+    "pattern": "where-number",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return names and scores of students scoring 70 or less. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score FROM students WHERE score <= 70",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "score"
+      ],
+      "rows": [
+        [
+          "Bala",
+          45
+        ],
+        [
+          "Dev",
+          50
+        ],
+        [
+          "Esha",
+          65
+        ]
+      ]
+    },
+    "hint": "At most includes the boundary: <=.",
+    "explanation": "At most includes the boundary: <=. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-students-by-name",
+    "title": "Names in Order",
+    "difficulty": "easy",
+    "rating": 1068,
+    "pattern": "order-by",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return student names sorted alphabetically by name. Keep duplicates. Keep the specified order.",
+    "referenceQuery": "SELECT name FROM students ORDER BY name",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Bala"
+        ],
+        [
+          "Chitra"
+        ],
+        [
+          "Dev"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "ORDER BY sorts the selected rows.",
+    "explanation": "ORDER BY sorts the selected rows. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-scores-desc",
+    "title": "Highest Scores First",
+    "difficulty": "easy",
+    "rating": 1069,
+    "pattern": "order-by",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return student scores in descending order. Keep duplicates. Keep the specified order.",
+    "referenceQuery": "SELECT score FROM students ORDER BY score DESC",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "score"
+      ],
+      "rows": [
+        [
+          90
+        ],
+        [
+          72
+        ],
+        [
+          65
+        ],
+        [
+          50
+        ],
+        [
+          45
+        ]
+      ]
+    },
+    "hint": "Add DESC after the sort column.",
+    "explanation": "Add DESC after the sort column. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-cities-desc",
+    "title": "Cities in Reverse",
+    "difficulty": "easy",
+    "rating": 1070,
+    "pattern": "distinct",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return distinct cities in reverse alphabetical order. Keep the specified order.",
+    "referenceQuery": "SELECT DISTINCT city FROM students ORDER BY city DESC",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "city"
+      ],
+      "rows": [
+        [
+          "Salem"
+        ],
+        [
+          "Madurai"
+        ],
+        [
+          "Chennai"
+        ]
+      ]
+    },
+    "hint": "Combine DISTINCT with ORDER BY DESC.",
+    "explanation": "Combine DISTINCT with ORDER BY DESC. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-last-student",
+    "title": "Last Student by ID",
+    "difficulty": "easy",
+    "rating": 1071,
+    "pattern": "limit",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the name of the student with the largest id, or no rows if the table is empty. Keep the specified order.",
+    "referenceQuery": "SELECT name FROM students ORDER BY id DESC LIMIT 1",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "Sort id descending and take one row.",
+    "explanation": "Sort id descending and take one row. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-two-lowest-ids",
+    "title": "Two Smallest IDs",
+    "difficulty": "easy",
+    "rating": 1072,
+    "pattern": "limit",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the two smallest student ids in ascending order, or fewer if fewer exist. Keep the specified order.",
+    "referenceQuery": "SELECT id FROM students ORDER BY id LIMIT 2",
+    "ordered": true,
+    "expected": {
+      "columns": [
+        "id"
+      ],
+      "rows": [
+        [
+          1
+        ],
+        [
+          2
+        ]
+      ]
+    },
+    "hint": "Sort by id, then LIMIT 2.",
+    "explanation": "Sort by id, then LIMIT 2. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-count-cities",
+    "title": "How Many Cities?",
+    "difficulty": "easy",
+    "rating": 1073,
+    "pattern": "count",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the number of distinct student cities. Any row order is accepted.",
+    "referenceQuery": "SELECT COUNT(DISTINCT city) AS city_count FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "city_count"
+      ],
+      "rows": [
+        [
+          3
+        ]
+      ]
+    },
+    "hint": "COUNT(DISTINCT city) counts unique values.",
+    "explanation": "COUNT(DISTINCT city) counts unique values. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-count-chennai",
+    "title": "Count Chennai Students",
+    "difficulty": "easy",
+    "rating": 1074,
+    "pattern": "count",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the number of students from Chennai. Any row order is accepted.",
+    "referenceQuery": "SELECT COUNT(*) AS total FROM students WHERE city = 'Chennai'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "total"
+      ],
+      "rows": [
+        [
+          2
+        ]
+      ]
+    },
+    "hint": "Filter first, then count rows.",
+    "explanation": "Filter first, then count rows. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-sum-scores",
+    "title": "Total Student Scores",
+    "difficulty": "easy",
+    "rating": 1075,
+    "pattern": "sum",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the sum of all scores. Return NULL if there are no students. Any row order is accepted.",
+    "referenceQuery": "SELECT SUM(score) AS total FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "total"
+      ],
+      "rows": [
+        [
+          322
+        ]
+      ]
+    },
+    "hint": "Use SUM(score).",
+    "explanation": "Use SUM(score). The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-lowest-score",
+    "title": "Lowest Student Score",
+    "difficulty": "easy",
+    "rating": 1076,
+    "pattern": "min",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the lowest score, or NULL when there are no students. Any row order is accepted.",
+    "referenceQuery": "SELECT MIN(score) AS lowest FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "lowest"
+      ],
+      "rows": [
+        [
+          45
+        ]
+      ]
+    },
+    "hint": "MIN finds the lowest value.",
+    "explanation": "MIN finds the lowest value. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-average-score",
+    "title": "Average Student Score",
+    "difficulty": "easy",
+    "rating": 1077,
+    "pattern": "avg",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return the average score, or NULL when there are no students. Any row order is accepted.",
+    "referenceQuery": "SELECT AVG(score) AS average FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "average"
+      ],
+      "rows": [
+        [
+          64.4
+        ]
+      ]
+    },
+    "hint": "AVG computes the mean.",
+    "explanation": "AVG computes the mean. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-student-score-boost",
+    "title": "Add Five Points",
+    "difficulty": "easy",
+    "rating": 1078,
+    "pattern": "arithmetic",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return each student name and their score plus 5, in that order. Do not change the table. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score + 5 AS boosted FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "boosted"
+      ],
+      "rows": [
+        [
+          "Anu",
+          77
+        ],
+        [
+          "Bala",
+          50
+        ],
+        [
+          "Chitra",
+          95
+        ],
+        [
+          "Dev",
+          55
+        ],
+        [
+          "Esha",
+          70
+        ]
+      ]
+    },
+    "hint": "Add 5 in the SELECT expression.",
+    "explanation": "Add 5 in the SELECT expression. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-student-score-double",
+    "title": "Double the Score",
+    "difficulty": "easy",
+    "rating": 1079,
+    "pattern": "arithmetic",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return each student name and twice their score, in that order. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score * 2 AS doubled FROM students",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "doubled"
+      ],
+      "rows": [
+        [
+          "Anu",
+          144
+        ],
+        [
+          "Bala",
+          90
+        ],
+        [
+          "Chitra",
+          180
+        ],
+        [
+          "Dev",
+          100
+        ],
+        [
+          "Esha",
+          130
+        ]
+      ]
+    },
+    "hint": "Multiply the score by 2.",
+    "explanation": "Multiply the score by 2. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-names-ending-a",
+    "title": "Names Ending in A",
+    "difficulty": "easy",
+    "rating": 1080,
+    "pattern": "like",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return student names ending in the letter a. SQLite LIKE matching is case-insensitive for ASCII letters. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE name LIKE '%a'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Bala"
+        ],
+        [
+          "Chitra"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "A percent sign before a matches any prefix.",
+    "explanation": "A percent sign before a matches any prefix. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-names-contain-a",
+    "title": "Names Containing A",
+    "difficulty": "easy",
+    "rating": 1081,
+    "pattern": "like",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return student names containing the letter a. SQLite LIKE matching is case-insensitive for ASCII letters. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE name LIKE '%a%'",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Anu"
+        ],
+        [
+          "Bala"
+        ],
+        [
+          "Chitra"
+        ],
+        [
+          "Esha"
+        ]
+      ]
+    },
+    "hint": "Place % on both sides of a.",
+    "explanation": "Place % on both sides of a. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-city-and-score",
+    "title": "Salem and Passing",
+    "difficulty": "easy",
+    "rating": 1082,
+    "pattern": "where-and",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return names of students in Salem with a score of at least 50. Any row order is accepted.",
+    "referenceQuery": "SELECT name FROM students WHERE city = 'Salem' AND score >= 50",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name"
+      ],
+      "rows": [
+        [
+          "Dev"
+        ]
+      ]
+    },
+    "hint": "Combine the city and score conditions with AND.",
+    "explanation": "Combine the city and score conditions with AND. The reference query applies this to the students table."
+  },
+  {
+    "slug": "sql-outside-range",
+    "title": "Outside 50 to 80",
+    "difficulty": "easy",
+    "rating": 1083,
+    "pattern": "where-or",
+    "schema": [
+      "CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT NOT NULL, city TEXT NOT NULL, score INTEGER NOT NULL)"
+    ],
+    "seedData": [
+      "INSERT INTO students VALUES (1,'Anu','Chennai',72),(2,'Bala','Madurai',45),(3,'Chitra','Chennai',90),(4,'Dev','Salem',50),(5,'Esha','Madurai',65)"
+    ],
+    "hiddenDatasets": [
+      [
+        "INSERT INTO students VALUES (8,'Zoya','Salem',49),(2,'Aadi','Chennai',50),(6,'Mira','Chennai',51),(4,'Aadi','Madurai',100)"
+      ],
+      [
+        "INSERT INTO students VALUES (19,'Solo','Kochi',0)"
+      ],
+      [
+        "INSERT INTO students VALUES (30,'Tara','Chennai',50),(10,'Uma','Kochi',50),(50,'Vani','Pune',10),(20,'Rohit','Kochi',80),(40,'Hari','Chennai',99),(60,'Nila','Pune',70)"
+      ],
+      []
+    ],
+    "task": "Return student names and scores outside the inclusive range 50 through 80. Any row order is accepted.",
+    "referenceQuery": "SELECT name, score FROM students WHERE score < 50 OR score > 80",
+    "ordered": false,
+    "expected": {
+      "columns": [
+        "name",
+        "score"
+      ],
+      "rows": [
+        [
+          "Bala",
+          45
+        ],
+        [
+          "Chitra",
+          90
+        ]
+      ]
+    },
+    "hint": "Use two comparisons joined by OR.",
+    "explanation": "Use two comparisons joined by OR. The reference query applies this to the students table."
   }
 ]

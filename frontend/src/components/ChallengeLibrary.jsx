@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export default function ChallengeLibrary({ bank, solved, bookmarks, filter, setFilter, search, setSearch, status, setStatus, busy, onOpen, onBookmark }) {
+export default function ChallengeLibrary({ loading, loadError, onRetry, bank, solved, bookmarks, filter, setFilter, search, setSearch, status, setStatus, busy, onOpen, onBookmark }) {
   const [pageIndex, setPageIndex] = useState(0);
   useEffect(() => { setPageIndex(0); }, [filter, search, status]);
   const visible = bank.filter(p =>
@@ -32,7 +32,7 @@ export default function ChallengeLibrary({ bank, solved, bookmarks, filter, setF
       <div className="challenge-list">{displayed.map((p, i) => <div className="challenge-card" key={p.slug}>
         <button className="challenge-row" aria-label={`Open ${p.title}`} disabled={busy} onClick={() => onOpen(p)}><span className={`challenge-number ${solved.has(p.slug) ? 'solved' : ''}`}>{solved.has(p.slug) ? '✓' : String(page * 12 + i + 1).padStart(2, '0')}</span><span className="challenge-name"><strong>{p.title}</strong><small>{p.pattern.replaceAll('+', ' / ').replaceAll('-', ' ')}</small></span><span className={`arena-difficulty ${p.difficulty}`}>{p.difficulty}</span></button>
         <button className="challenge-save" aria-label={`${bookmarks.has(p.slug) ? 'Remove bookmark for' : 'Bookmark'} ${p.title}`} aria-pressed={bookmarks.has(p.slug)} onClick={() => onBookmark(p.slug)}>{bookmarks.has(p.slug) ? '★' : '☆'}</button>
-      </div>)}{!visible.length && <p className="arena-no-results">{bank.length ? 'No challenges match these filters. Try another difficulty, status, or search.' : 'Loading missions…'}</p>}</div>
+      </div>)}{!visible.length && <p className="arena-no-results">{loadError ? <>{loadError} <button className="arena-secondary" onClick={onRetry}>Try loading challenges again</button></> : loading ? 'Waking the server and loading challenges. This can take a few minutes on free hosting…' : bank.length ? 'No challenges match these filters. Try another difficulty, status, or search.' : 'No challenges are available right now.'}</p>}</div>
       {pageCount > 1 && <nav className="library-pagination" aria-label="Challenge pages"><span>{page * 12 + 1}–{Math.min((page + 1) * 12, visible.length)} of {visible.length} challenges</span><div>{Array.from({ length: pageCount }, (_, n) => <button key={n} aria-label={`Challenge page ${n + 1}`} aria-current={page === n ? 'page' : undefined} onClick={() => changePage(n)}>{n + 1}</button>)}</div></nav>}
       <p className="bookmark-note">Bookmarks stay in this browser for your current guest pass. Random practice uses the filters above.</p>
     </div>

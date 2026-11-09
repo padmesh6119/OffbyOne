@@ -214,3 +214,28 @@ body {font-size:14px; -webkit-font-smoothing:antialiased;}
 .library-pagination button[aria-current=page] {background:var(--soft);border-color:var(--accent);color:var(--accent);}
 .library-pagination button:hover {background:var(--raised);}
 @media(min-width:1350px) {.challenge-list {grid-template-columns:repeat(2,minmax(0,1fr));}.challenge-row {padding:17px 12px;gap:11px;}.challenge-number {width:25px;height:28px;flex-shrink:0;}.challenge-save {flex-basis:32px;}.challenge-name strong {font-size:12px;}.challenge-name small {font-size:8px;}}
+/* Light mode has its own playful, saturated palette. */
+:root[data-theme=light] {--bg:#f2f5ff;--surface:#fff;--raised:#e9edff;--text:#222840;--muted:#616b84;--border:#d5dcf0;--accent:#c04435;--soft:#f7654514;--good:#187a60;--blue:#426cc4;--sidebar:#fff;--shadow:0 12px 30px #59689c0d;}
+:root[data-theme=light] .arena-hero {background:radial-gradient(circle at 90% 20%,#e5d8ff 0,transparent 35%),radial-gradient(circle at 55% 95%,#cceff5 0,transparent 38%),linear-gradient(120deg,#fff8ed,#fff4ed 52%,#f3edff);border-color:#ead9e2;}
+:root[data-theme=light] .club-sidebar {background:linear-gradient(180deg,#fff 0%,#f9f8ff 100%);}
+:root[data-theme=light] .club-note {background:linear-gradient(145deg,#fff4e7,#f5eaff);border-color:#ead6ee;}
+:root[data-theme=light] .arena-invite {background:#eff7ff;border-color:#ccdef4;}
+:root[data-theme=light] .daily-card {background:linear-gradient(135deg,#fff2d5,#fff8ea 60%,#ffebef);border-color:#f1d9b8;}
+:root[data-theme=light] .session-card {background:linear-gradient(135deg,#eff2ff,#f6f2ff);border-color:#dbd9f5;}
+:root[data-theme=light] .learning-path:nth-child(1) {background:#fff2ec;border-color:#f3d5c8;}
+:root[data-theme=light] .learning-path:nth-child(2) {background:#e9f8f0;border-color:#caead9;}
+:root[data-theme=light] .learning-path:nth-child(3) {background:#ebf4ff;border-color:#cfe0f9;}
+:root[data-theme=light] .learning-path:nth-child(4) {background:#f5edff;border-color:#e3d4f6;}
+:root[data-theme=light] .arena-playbook {background:#edf0ff;border-color:#d9ddf7;}
+:root[data-theme=light] .challenge-card:nth-child(4n + 1) .challenge-number {background:#fff0e7;color:#a74425;border-color:#f6d9ca;}
+:root[data-theme=light] .challenge-card:nth-child(4n + 2) .challenge-number {background:#e8f8f1;color:#287758;border-color:#ceeadb;}
+:root[data-theme=light] .challenge-card:nth-child(4n + 3) .challenge-number {background:#eaf2ff;color:#4266a2;border-color:#d5e2f7;}
+:root[data-theme=light] .challenge-card:nth-child(4n) .challenge-number {background:#f4eaff;color:#8255a3;border-color:#e9d7f6;}
+:root[data-theme=light] .challenge-panel {background:#f7f9ff;}
+:root[data-theme=light] .query-panel {box-shadow:0 12px 35px #7286bd18;}
+:root[data-theme=light] .settings-card:nth-child(1) {background:#fff3eb;border-color:#f1d9cc;}
+:root[data-theme=light] .settings-card:nth-child(2) {background:#f0f0ff;border-color:#deddf6;}
+:root[data-theme=light] .progress-stats>div:nth-child(4n + 1) {background:#fff2e9;}
+:root[data-theme=light] .progress-stats>div:nth-child(4n + 2) {background:#edf9f1;}
+:root[data-theme=light] .progress-stats>div:nth-child(4n + 3) {background:#edf3ff;}
+:root[data-theme=light] .progress-stats>div:nth-child(4n) {background:#f6efff;}

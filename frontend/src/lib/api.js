@@ -13,7 +13,7 @@ async function req(path, options = {}) {
   const requestHeaders = headers();
   if (!navigator.onLine) throw new Error('You are offline. Reconnect and try again.');
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 75000);
+  const timeout = setTimeout(() => controller.abort(), 180000);
   let res;
   try { res = await fetch(BASE + path, { ...options, headers: requestHeaders, signal: controller.signal }); }
   catch (e) { throw new Error(e.name === 'AbortError' ? 'The server is taking too long. Please try again; free hosting can take a moment to wake up.' : 'Could not reach the server. Check your connection and try again.'); }

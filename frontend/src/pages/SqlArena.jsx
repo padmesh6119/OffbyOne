@@ -44,6 +44,9 @@ export default function SqlArena() {
   const [roomId, setRoomId] = useState(() => params.has('challenge') ? null : localStorage.getItem(savedKey));
   const [match, setMatch] = useState(null);
   const [bank, setBank] = useState([]);
+  const [bankLoading, setBankLoading] = useState(true);
+  const [bankError, setBankError] = useState('');
+  const [bankRetry, setBankRetry] = useState(0);
   const [practice, setPractice] = useState(null);
   const [code, setCode] = useState(params.get('code') || '');
   const [query, setQuery] = useState(starter);
@@ -80,11 +83,15 @@ export default function SqlArena() {
 
   useEffect(() => {
     let live = true;
-    Promise.all([api.sqlProblems(), api.mySubmissions()]).then(([problems, attempts]) => {
-      if (!live) return; setBank(problems); setSolved(new Set(attempts.filter(s => s.language === 'sql' && s.verdict === 'accepted').map(s => s.problemSlug)));
+    setBankLoading(true); setBankError('');
+    api.sqlProblems().then(problems => { if (live) setBank(problems); })
+      .catch(e => { if (live) setBankError(errorMessage(e)); })
+      .finally(() => { if (live) setBankLoading(false); });
+    api.mySubmissions().then(attempts => {
+      if (live) setSolved(new Set(attempts.filter(s => s.language === 'sql' && s.verdict === 'accepted').map(s => s.problemSlug)));
     }).catch(e => { if (live) setError(errorMessage(e)); });
     return () => { live = false; };
-  }, []);
+  }, [bankRetry]);
   const updateMatch = useCallback(m => {
     setMatch(m); setOffset(Date.parse(m.serverTime) - Date.now());
   }, []);
@@ -207,7 +214,7 @@ export default function SqlArena() {
         {localStorage.getItem(savedKey) && <div className="resume-match"><div><strong>Your duel is still here.</strong><p>Jump back into your remembered match whenever you are ready.</p></div><button className="arena-secondary" disabled={!!busy} onClick={() => action('Resuming match', async () => enter(await api.arenaState(localStorage.getItem(savedKey))))}>Resume duel ↗</button></div>}
         <section className="arena-invite"><div className="invite-icon"><Glyph/></div><div><strong>Your rival is waiting.</strong><p>Enter your opponent’s code to enter their arena.</p></div><form onSubmit={e => { e.preventDefault(); action('Joining match', async () => enter(await api.arenaJoin(code.trim()))); }}><input aria-label="Invite code" placeholder="INVITE CODE" value={code} maxLength={40} onChange={e => setCode(e.target.value.toUpperCase())}/><button className="arena-secondary" disabled={!!busy || !code.trim()}>Join duel <span>↗</span></button></form></section>
         <div className="arena-overview" aria-label="Your arena overview"><div><span className="overview-symbol">⌘</span><span><strong>{bank.length || "—"}</strong><small>SQL challenges</small></span></div><div><span className="overview-symbol">✓</span><span><strong>{solved.size}</strong><small>Challenges cleared</small></span></div><div><span className="overview-symbol">↗</span><span><strong>{localStorage.getItem("skillLevel") || 1}<em>/10</em></strong><small>Your SQL level</small></span></div><div className="overview-note"><span className="overview-spark">✳</span><p>Progress starts small.<br/><strong>Show up. Query. Repeat.</strong></p></div></div><PracticeHub bank={bank} solved={solved} busy={!!busy} onOpen={openPractice}/>
-        <ChallengeLibrary bank={bank} solved={solved} bookmarks={bookmarks} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} status={practiceStatus} setStatus={setPracticeStatus} busy={!!busy} onOpen={openPractice} onBookmark={toggleBookmark}/>
+        <ChallengeLibrary loading={bankLoading} loadError={bankError} onRetry={() => setBankRetry(n => n + 1)} bank={bank} solved={solved} bookmarks={bookmarks} filter={filter} setFilter={setFilter} search={search} setSearch={setSearch} status={practiceStatus} setStatus={setPracticeStatus} busy={!!busy} onOpen={openPractice} onBookmark={toggleBookmark}/>
       </>}
       {match?.status === 'waiting' && <section className="arena-lobby"><div className="arena-eyebrow">PRIVATE MATCH / BEST OF THREE</div><h1>A rivalry starts<br/>with an <em>invite.</em></h1><p>Two players. Three SQL challenges. Five minutes per round.</p><div className="match-skill"><label htmlFor="lobby-skill">YOUR SQL LEVEL · {skillLevel}/10</label><input id="lobby-skill" aria-label="Duel skill level" type="range" min="1" max="10" value={skillLevel} onChange={e => setSkillLevel(Number(e.target.value))}/><button className="arena-secondary" disabled={!!busy || me?.skillLevel === skillLevel} onClick={() => action('Setting skill', async () => { updateMatch(await api.arenaAction(roomId, 'skill', {level: skillLevel})); localStorage.setItem('skillLevel', skillLevel); })}>Save level</button><strong>DUEL LEVEL {match.skillLevel}/10 · {match.skillLevel <= 3 ? 'FOUNDATIONS' : match.skillLevel <= 7 ? 'INTERMEDIATE' : 'ADVANCED'}</strong><p>{match.players.map(p => `${p.username}: ${p.skillLevel}/10`).join(' · ')}</p><small>Rounded average of both players. Same three questions, closest available difficulty, no repeats. Levels are self-rated.</small></div><div className="lobby-duo"><Player name={username} score={0}/><span>VS</span><Player name={opponent?.username} score={0}/></div><button className="invite-code" onClick={copyInvite}><small>{copied ? 'INVITE LINK COPIED' : 'CLICK TO COPY INVITE LINK'}</small><strong>{match.code.length > 12 ? 'REMATCH INVITE ↗' : match.code}</strong></button><div className="lobby-actions">{match.host === username ? <button className="arena-primary" disabled={!!busy || !opponent} onClick={() => action('Starting', async () => updateMatch(await api.arenaAction(roomId, 'start')))}>{opponent ? 'Start the duel →' : 'Waiting for your challenger…'}</button> : <p className="arena-eyebrow">Waiting for {match.host} to start…</p>}<button className="arena-text-link" disabled={!!busy} onClick={() => action('Leaving', async () => { await api.arenaAction(roomId, 'leave'); home(); })}>Leave lobby</button></div></section>}
       {(practice || (match && ['active', 'intermission'].includes(match.status))) && problem && <>
