@@ -20,6 +20,9 @@ import './design.css';
 import './engagement.css';
 import './essentials.css';
 import './studio.css';
+import './daylight.css';
+import './motion.css';
+import './clarity.css';
 
 function Workspace() {
   const location = useLocation();
@@ -48,36 +51,30 @@ function Workspace() {
   }, [token, retry]);
   if (!token && location.pathname !== '/help') return <Navigate to="/join" state={{ from: location.pathname + location.search }} replace />;
   const remaining = Math.max(0, Math.ceil((Date.parse(localStorage.getItem('expiresAt')) - now) / 1000));
-  const time = Number.isFinite(remaining) ? `${Math.floor(remaining / 3600)}h ${Math.floor(remaining % 3600 / 60)}m` : '';
   const section = { '/profile': 'YOUR PROGRESS', '/leaderboard': 'THE STANDINGS', '/settings': 'YOUR SETTINGS', '/help': 'THE BRIEFING' }[location.pathname] || 'THE ARENA';
   return <div className="sql-app workspace">
     <a className="skip-link" href="#workspace-main">Skip to content</a>
     <aside className="club-sidebar">
       <NavLink to="/" className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone<span className="brand-period">.</span></NavLink>
-      <span className="sidebar-caption">THE SQL PLAYGROUND</span>
-      <div className="sidebar-label">YOUR WORKSPACE</div>
       <nav aria-label="Main navigation" className="club-nav">
         <NavLink to="/" end><Icon name="arena"/>SQL Arena<span className="nav-active-dot"/></NavLink>
         <NavLink to="/profile"><Icon name="progress"/>My Progress</NavLink>
         <NavLink to="/leaderboard"><Icon name="trophy"/>Standings</NavLink>
       </nav>
       <div className="sidebar-bottom">
-        <div className="club-note"><Icon name="code" size={26}/><strong>One query closer.</strong><p>A little practice today.<br/>A better player tomorrow.</p><NavLink to="/help">Find your starting point ↗</NavLink></div>
         <nav className="club-nav" aria-label="Resources"><NavLink to="/settings"><Icon name="settings"/>Settings & drafts</NavLink><NavLink to="/help"><Icon name="help"/>Help & shortcuts</NavLink></nav>
-        <span className="sidebar-signoff"><i/> BUILT FOR CURIOUS MINDS</span>
       </div>
     </aside>
     <header className="site-header">
-      <div className="header-title"><span>Workspace</span><span>/</span><strong>{section === 'THE ARENA' ? 'SQL Arena' : section === 'YOUR PROGRESS' ? 'My Progress' : section === 'THE STANDINGS' ? 'Standings' : section === 'YOUR SETTINGS' ? 'Settings & drafts' : 'Help & shortcuts'}</strong></div>
+      <div className="header-title"><strong>{section === 'THE ARENA' ? 'SQL Arena' : section === 'YOUR PROGRESS' ? 'My Progress' : section === 'THE STANDINGS' ? 'Standings' : section === 'YOUR SETTINGS' ? 'Settings & drafts' : 'Help & shortcuts'}</strong></div>
       <div className="header-account"><ThemeToggle/>{token ? <PlayerMenu/> : <NavLink className="arena-secondary" to="/join">Get a guest pass ↗</NavLink>}</div>
     </header>
     <main className="workspace-main" id="workspace-main" tabIndex="-1">
-      <header className="arena-top"><span className="arena-breadcrumb">PLAY / <strong>{section}</strong></span>{token && <NavLink to="/settings" className={`session-label ${remaining < 900 ? 'ending-soon' : ''}`} title="Your guest pass time remaining">GUEST PASS <i/> {time ? `${time} LEFT` : 'ACTIVE'}</NavLink>}</header>
       {!online && <div className="connection-banner" role="status">You are offline. Your open query stays here. Reconnect before running or submitting.</div>}
       {token && remaining > 0 && remaining < 900 && <div className="connection-banner" role="status">Your guest pass ends in less than 15 minutes. <NavLink to="/profile">Export progress</NavLink> or <NavLink to="/settings">download drafts</NavLink> before it expires.</div>}
       {sessionError && online && <div className="connection-banner" role="status">Could not check your guest pass. <button onClick={() => setRetry(v => v + 1)}>Try again</button></div>}
       <div className="workspace-content"><Outlet /></div>
-      <footer className="arena-footer"><span>OFFBYONE <b>MAKE EVERY ATTEMPT COUNT</b></span><span>Small margins. Better solutions.</span><span className="footer-links"><NavLink to="/help">Help & shortcuts</NavLink>{token && <NavLink to="/settings">Settings</NavLink>}<a href="https://github.com/padmesh6119/OffbyOne" target="_blank" rel="noreferrer">GitHub ↗</a></span></footer>
+      <footer className="arena-footer"><span>offbyone.</span><span className="footer-links"><NavLink to="/help">Help & shortcuts</NavLink>{token && <NavLink to="/settings">Settings</NavLink>}<a href="https://github.com/padmesh6119/OffbyOne" target="_blank" rel="noreferrer">GitHub ↗</a></span></footer>
     </main>
   </div>;
 }

@@ -1,0 +1,41 @@
+/* Short entrances and responsive interactions; all content remains accessible. */
+@keyframes section-in {from {opacity:.25;transform:translateY(16px)} to {opacity:1;transform:translateY(0)}}
+@keyframes query-float {0%,100% {translate:0 0} 50% {translate:0 -7px}}
+@keyframes orbit-travel {to {rotate:360deg}}
+@keyframes ink-in {from {clip-path:inset(0 100% 0 0)} to {clip-path:inset(0 0 0 0)}}
+@keyframes verdict-in {from {opacity:0;transform:translateY(8px)} to {opacity:1;transform:none}}
+.reveal-entered {animation:section-in .65s cubic-bezier(.2,.75,.25,1) var(--reveal-delay,0ms) backwards;}
+.hero-copy {animation:section-in .7s cubic-bezier(.2,.75,.25,1) both;}
+.hero-copy h1 em::after {animation:ink-in .8s .4s both;}
+.query-art-you {animation:card-arrive .7s ease-out both,query-float 7s 1s ease-in-out infinite;}
+.query-art-rival {animation:card-arrive .9s ease-out both,query-float 7s 3s ease-in-out infinite;}
+.art-orbit {transform:translate(-50%,-50%);}
+.art-orbit>span {position:absolute;inset:-1px;border-radius:50%;animation:orbit-travel 24s linear infinite;}
+.art-orbit>span::after {content:'';width:6px;height:6px;border:2px solid var(--surface);background:var(--accent);border-radius:50%;position:absolute;left:50%;top:-3px;box-shadow:0 0 0 3px var(--soft);}
+.orbit-two>span {animation-direction:reverse;animation-duration:32s;}
+.orbit-two>span::after {background:var(--blue);width:5px;height:5px;}
+.art-code>code {animation:ink-in .65s ease-out both;}
+.art-code>code:nth-of-type(2) {animation-delay:.2s;}.art-code>code:nth-of-type(3) {animation-delay:.4s;}
+.match-art:hover .query-art-card {animation-play-state:paused;}
+.club-nav a {transition:background .2s,color .2s,border-color .2s;}
+.club-nav a>svg {transition:transform .25s cubic-bezier(.2,.75,.25,1);}
+.club-nav a:hover>svg {transform:translateX(2px) rotate(-5deg);}
+.arena-primary,.arena-secondary {transition:background .18s,box-shadow .18s,transform .18s,border-color .18s;}
+.arena-primary:active:not(:disabled),.arena-secondary:active:not(:disabled) {transform:translateY(1px) scale(.98);}
+.arena-text-link {text-underline-offset:5px;}.arena-text-link:hover {text-decoration:underline;}
+.challenge-card {transition:translate .2s;}.challenge-card:hover {translate:3px 0;}
+.learning-path {transition:box-shadow .25s,border-color .25s,translate .25s;}
+.learning-path:hover {transform:none;translate:0 -4px;box-shadow:0 10px 24px #202b4310;}
+.path-icon {transition:transform .3s;}.learning-path:hover .path-icon {transform:rotate(-7deg);}
+.arena-verdict {animation:verdict-in .4s ease-out both;}
+.account-popover {transform-origin:top right;animation:badge-appear .2s ease-out both;}
+.confirm-dialog[open] {animation:badge-appear .25s ease-out both;}
+.achievement.unlocked .achievement-icon {position:relative;}
+.achievement.unlocked .achievement-icon::after {content:'';position:absolute;inset:-5px;border:1px solid var(--accent);border-radius:inherit;opacity:.2;}
+.achievement.unlocked:hover .achievement-icon {rotate:8deg;scale:1.08;}
+.achievement-icon {transition:rotate .25s,scale .25s;}
+@media(prefers-reduced-motion:reduce) {
+  .sql-app *, .sql-app *::before, .sql-app *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
+  .learning-path:hover,.challenge-card:hover {translate:none;}
+}
+html[data-motion=reduced] .learning-path:hover,html[data-motion=reduced] .challenge-card:hover {translate:none;}
