@@ -47,13 +47,26 @@ public class PracticeHubController {
         boolean dailyDone = attempts.stream().anyMatch(s -> "accepted".equals(s.getVerdict())
                 && daily.slug().equals(s.getSqlSlug()) && today.equals(s.getSubmittedAt().toLocalDate()));
         long joins = problems.stream().filter(p -> solved.contains(p.slug()) && p.pattern().contains("join")).count();
+        long easy = problems.stream().filter(p -> solved.contains(p.slug()) && "easy".equals(p.difficulty())).count();
+        long medium = problems.stream().filter(p -> solved.contains(p.slug()) && "medium".equals(p.difficulty())).count();
+        long hard = problems.stream().filter(p -> solved.contains(p.slug()) && "hard".equals(p.difficulty())).count();
+        long patterns = problems.stream().filter(p -> solved.contains(p.slug())).map(SqlProblem::pattern).distinct().count();
         var badges = List.of(
                 badge("first", "First blood", "Solve your first SQL challenge.", !solved.isEmpty()),
                 badge("five", "Finding your flow", "Solve five different challenges.", solved.size() >= 5),
                 badge("ten", "Double digits", "Solve ten different challenges.", solved.size() >= 10),
                 badge("precise", "One shot", "Solve a challenge on your first submission.", firstTry > 0),
                 badge("joins", "Better together", "Solve three challenges involving joins.", joins >= 3),
-                badge("daily", "Daily discipline", "Clear today's daily challenge.", dailyDone));
+                badge("daily", "Daily discipline", "Clear today's daily challenge.", dailyDone),
+                badge("twentyfive", "Quarter century", "Solve 25 different challenges.", solved.size() >= 25),
+                badge("fifty", "Half a hundred", "Solve 50 different challenges.", solved.size() >= 50),
+                badge("foundation", "Solid ground", "Solve 10 easy challenges.", easy >= 10),
+                badge("climb", "The climb", "Solve your first medium challenge.", medium >= 1),
+                badge("summit", "At the summit", "Solve your first hard challenge.", hard >= 1),
+                badge("versatile", "Many ways to query", "Solve challenges across 8 SQL patterns.", patterns >= 8),
+                badge("sharp", "Clean work", "Solve 5 challenges on the first try.", firstTry >= 5),
+                badge("xp1000", "Gathering momentum", "Earn 1,000 XP in this guest pass.", xp >= 1000),
+                badge("xp2500", "In the zone", "Earn 2,500 XP in this guest pass.", xp >= 2500));
         return Map.of("xp", xp, "level", 1 + xp / 500, "levelProgress", xp % 500,
                 "solved", solved, "attempts", attempts.size(), "firstTry", firstTry, "badges", badges,
                 "daily", Map.of("slug", daily.slug(), "title", daily.title(), "difficulty", daily.difficulty(),

@@ -239,3 +239,15 @@ body {font-size:14px; -webkit-font-smoothing:antialiased;}
 :root[data-theme=light] .progress-stats>div:nth-child(4n + 2) {background:#edf9f1;}
 :root[data-theme=light] .progress-stats>div:nth-child(4n + 3) {background:#edf3ff;}
 :root[data-theme=light] .progress-stats>div:nth-child(4n) {background:#f6efff;}
+.brand-symbol {padding:0;background:transparent;color:var(--accent);}
+.brand-mark {width:34px;height:34px;display:block;}
+.badge-celebration {position:fixed;z-index:120;right:28px;top:96px;display:flex;align-items:center;gap:16px;max-width:410px;padding:18px;background:var(--surface);border:1px solid var(--accent);border-radius:14px;box-shadow:0 18px 60px #0004;color:var(--text);animation:badge-appear .55s cubic-bezier(.2,.9,.25,1.2) both;}
+.badge-celebration-icon {width:50px;height:50px;display:grid;place-items:center;flex:none;background:var(--soft);border:1px solid var(--accent);border-radius:15px;color:var(--accent);font-size:30px;animation:badge-spark .7s .2s both;}
+.badge-celebration span {display:block;font:9px var(--mono);letter-spacing:1px;color:var(--accent);}
+.badge-celebration strong {display:block;font:600 17px var(--display);margin:6px 0;}
+.badge-celebration p {font-size:11px;color:var(--muted);line-height:1.5;}
+.badge-celebration button {align-self:flex-start;margin-left:8px;border:0;background:none;color:var(--muted);font-size:20px;}
+.achievement.unlocked .achievement-icon {animation:badge-spark .7s both;}
+@keyframes badge-appear {from {opacity:0;transform:translateY(-16px) scale(.95)} to {opacity:1;transform:translateY(0) scale(1)}}
+@keyframes badge-spark {from {opacity:0;transform:rotate(-30deg) scale(.6)} to {opacity:1;transform:rotate(0) scale(1)}}
+@media(prefers-reduced-motion:reduce) {.badge-celebration,.badge-celebration-icon,.achievement.unlocked .achievement-icon {animation:none;}}

@@ -44,6 +44,8 @@ export default function SqlArena() {
   const [roomId, setRoomId] = useState(() => params.has('challenge') ? null : localStorage.getItem(savedKey));
   const [match, setMatch] = useState(null);
   const [bank, setBank] = useState([]);
+  const [newBadges, setNewBadges] = useState([]);
+  const badgeSnapshot = useRef(null);
   const [bankLoading, setBankLoading] = useState(true);
   const [bankError, setBankError] = useState('');
   const [bankRetry, setBankRetry] = useState(0);
@@ -92,6 +94,20 @@ export default function SqlArena() {
     }).catch(e => { if (live) setError(errorMessage(e)); });
     return () => { live = false; };
   }, [bankRetry]);
+  useEffect(() => { let live = true; api.practiceHub().then(data => {
+    if (live) badgeSnapshot.current = new Set(data.badges.filter(b => b.unlocked).map(b => b.id));
+  }).catch(() => {}); return () => { live = false; }; }, []);
+  async function checkBadges() {
+    try {
+      const data = await api.practiceHub();
+      const unlocked = data.badges.filter(b => b.unlocked);
+      if (badgeSnapshot.current) {
+        const fresh = unlocked.filter(b => !badgeSnapshot.current.has(b.id));
+        if (fresh.length) setNewBadges(fresh);
+      }
+      badgeSnapshot.current = new Set(unlocked.map(b => b.id));
+    } catch { /* The solve is already saved; badges will appear on the profile. */ }
+  }
   const updateMatch = useCallback(m => {
     setMatch(m); setOffset(Date.parse(m.serverTime) - Date.now());
   }, []);
@@ -172,13 +188,14 @@ export default function SqlArena() {
     if (!problem || !query.trim()) return;
     await action(submit ? 'Judging' : 'Running', async () => {
       if (!submit) setResult(await api.sqlRun(problem.slug, query));
-      else if (roomId) { const response = await api.arenaAction(roomId, 'submit', { round: match.round, query }); setResult(response.result); updateMatch(response.match); if (response.result?.status === 'accepted') setSolved(previous => new Set([...previous, problem.slug])); }
+      else if (roomId) { const response = await api.arenaAction(roomId, 'submit', { round: match.round, query }); setResult(response.result); updateMatch(response.match); if (response.result?.status === 'accepted') { setSolved(previous => new Set([...previous, problem.slug])); checkBadges(); } }
       else {
         const r = await api.sqlSubmit(problem.slug, query);
         setResult({ status: r.verdict, message: r.message, actualColumns: r.actual?.columns, actualRows: r.actual?.rows, expectedColumns: r.expected?.columns, expectedRows: r.expected?.rows });
         if (r.verdict === 'accepted') {
           setSolved(previous => new Set([...previous, problem.slug]));
           setPracticeReview(r.review || null);
+          checkBadges();
         }
       }
     });
@@ -205,6 +222,7 @@ export default function SqlArena() {
   const nextUnsolved = bank.find(p => !solved.has(p.slug) && p.slug !== problem?.slug);
 
   return <>
+      {newBadges.length > 0 && <div className="badge-celebration" role="status"><div className="badge-celebration-icon" aria-hidden="true">✦</div><div><span>BADGE UNLOCKED</span><strong>{newBadges.map(b => b.title).join(' · ')}</strong><p>{newBadges.map(b => b.description).join(' ')}</p></div><button aria-label="Dismiss badge notification" onClick={() => setNewBadges([])}>×</button></div>}
       {error && <div className="arena-error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       {roomId && !match && <section className="arena-loading"><span className="judge-spinner"/> Reconnecting to your match…<button className="arena-secondary" onClick={home}>Back to arena</button></section>}
       {!roomId && !practice && <>

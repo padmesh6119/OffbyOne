@@ -1,3 +1,4 @@
+import BrandMark from './components/BrandMark';
 import { useEffect, useState } from 'react';
 import { ThemeProvider, ThemeToggle } from './theme';
 import { PreferencesProvider } from './preferences';
@@ -52,7 +53,7 @@ function Workspace() {
   return <div className="sql-app workspace">
     <a className="skip-link" href="#workspace-main">Skip to content</a>
     <aside className="club-sidebar">
-      <NavLink to="/" className="workspace-brand"><span className="brand-symbol">/₁</span> offbyone<span className="brand-period">.</span></NavLink>
+      <NavLink to="/" className="workspace-brand"><span className="brand-symbol"><BrandMark/></span> offbyone<span className="brand-period">.</span></NavLink>
       <span className="sidebar-caption">THE SQL PLAYGROUND</span>
       <div className="sidebar-label">YOUR WORKSPACE</div>
       <nav aria-label="Main navigation" className="club-nav">
