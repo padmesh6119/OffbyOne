@@ -12,7 +12,7 @@ The SQL editor supports a full-width focus mode, Ctrl/Cmd+Enter to run samples, 
 
 The SQL arena includes private invite links, best-of-three friendly duels, five-minute rounds, server-owned scores, browser draft recovery, shared rematch lobbies, and post-match explanations. Two wins end a match early. A timeout draws that round; after three rounds the higher score wins, or the match is drawn. Leaving forfeits the match. Friendly arena matches do not change Elo.
 
-The bank contains 32 SQL challenges: 20 beginner-friendly easy questions, 8 medium, and 4 hard. Easy questions use one table and cover SELECT, WHERE, ORDER BY, DISTINCT, LIMIT, COUNT, SUM, MIN, MAX, AND/OR, BETWEEN, IN, LIKE, IS NULL, and arithmetic; they require no joins, subqueries, or window functions. The original 12 questions are now medium or hard. Each challenge has a public dataset and four additional datasets covering changed values, boundaries or duplicates, sparse data, and empty tables. Practice also supports bookmarks for the current guest pass in this browser, solved/unsolved/bookmarked filters, a completion bar, and a random challenge drawn from the visible filtered results. A new guest pass clears bookmarks for that name. Practice includes a per-question hint, expected public sample output, and a SQL quick reference. An accepted practice submission unlocks an explained reference solution and a Next unsolved challenge button; these learning panels are absent during duels. Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
+The bank contains 184 SQL challenges spanning foundations, grouping, joins, conditional expressions, subqueries and windows. Easy questions use one table and cover SELECT, WHERE, ORDER BY, DISTINCT, LIMIT, COUNT, SUM, MIN, MAX, AND/OR, BETWEEN, IN, LIKE, IS NULL, and arithmetic; they require no joins, subqueries, or window functions. The original 12 questions are now medium or hard. Each challenge has a public dataset and four additional datasets covering changed values, boundaries or duplicates, sparse data, and empty tables. Practice also supports bookmarks for the current guest pass in this browser, solved/unsolved/bookmarked filters, a completion bar, and a random challenge drawn from the visible filtered results. A new guest pass clears bookmarks for that name. Practice includes a per-question hint, expected public sample output, and a SQL quick reference. An accepted practice submission unlocks an explained reference solution and a Next unsolved challenge button; these learning panels are absent during duels. Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
 
 ## Local preview without cloud credentials
 
@@ -70,7 +70,7 @@ The original `tools/gen_sql_bank.py` is a historical sample-bank generator. Do n
 
 - Daily SQL challenge: the same beginner friendly problem for everyone, rotating at midnight UTC.
 - Four guided learning paths with completion tracking and a next challenge.
-- XP for distinct SQL solves (100 easy, 200 medium, 350 hard), levels every 500 XP, and six achievement badges. Repeating a problem does not award extra XP.
+- XP for distinct SQL solves (100 easy, 200 medium, 350 hard), levels every 500 XP, and 15 original illustrated achievement badges. Repeating a problem does not award extra XP.
 - Standings for active guest passes, with tied XP sharing a rank. Expired passes disappear from standings.
 - My Progress includes a searchable query notebook, private submission review, query restore in the editor, and a downloadable JSON progress snapshot.
 - Challenge links survive refresh. Guest passes still expire after 24 hours; an exported snapshot is a personal record, not a login or pass restore mechanism.
@@ -80,7 +80,12 @@ These features use existing SQL submissions and the existing database; they requ
 ### Session and workspace controls
 
 - The player menu links to progress, settings, help, and logout. Logout revokes the guest pass on the server, releases its name immediately, forfeits unfinished SQL duels, and clears that pass's local drafts, bookmarks, and remembered match. A new pass starts fresh.
-- Session time remaining is displayed in the header. Expiry and logout synchronize across browser tabs, with an export reminder during the final 15 minutes.
+- Session time remaining is shown only near expiry. Expiry and logout synchronize across browser tabs, with an export reminder during the final 15 minutes.
 - Settings save the SQL level for future duels and browser preferences for theme, font size, word wrapping, line numbers, and reduced animations.
 - The local draft manager supports review, SQL downloads, opening drafts in practice, and confirmed deletion. The editor supports importing .sql/.txt files up to 16 KB, downloading SQL, and confirmed reset.
 - Public help covers the judge, guest lifecycle, shortcuts, and free hosting behavior. Unknown routes have a 404 page, offline requests receive an explanation, and rendering errors offer recovery.
+
+### Daily precision competition
+The daily board ranks active guests by submitted attempts through their first accepted solo answer to today's shared problem. Samples do not count; later retries cannot improve the score. Equal counts share a rank. Results reset at midnight UTC. Guests can start over with new passes, so this remains friendly competition. The daily board uses existing submissions and requires no new database table or paid service.
+
+Difficulty tiers are strict for duels. Easy covers single-table selection, filtering, sorting and basic calculations; medium includes grouping, joins, CASE and simple subqueries; hard covers windows and multi-step analysis. Next-unsolved practice stays in the selected problem's tier. The bank expansion source is `tools/expand_sql_bank.py`; original curated problems are retained. Every reference answer is checked against its sample and hidden datasets by `SqlJudgeTest`.

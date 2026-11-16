@@ -41,7 +41,7 @@ export default function PracticeHub({ bank, solved, busy, onOpen, children, libr
         {error ? <div className="hub-notice" role="alert">{error} <button onClick={() => setReload(n => n + 1)}>Try again</button></div> : !data ? <p className="daily-loading" role="status">Loading your daily challenge…</p> : <>
           <h2>{data.daily.title}</h2><p>A fresh start. One good query.</p>
           <button className="arena-primary" disabled={busy} onClick={() => onOpen(data.daily)}>{data.daily.completed ? 'Play it again' : 'Take the challenge'} <span aria-hidden="true">↗</span></button>
-          <span className="daily-countdown" title="Resets at midnight UTC">Next challenge in {countdown}</span>
+          <Link to="/daily" className="daily-competition">Compete on today’s precision board ↗</Link><span className="daily-countdown" title="Resets at midnight UTC">Next challenge in {countdown}</span>
         </>}
       </article>
     </div>

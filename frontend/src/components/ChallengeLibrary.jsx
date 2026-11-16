@@ -24,7 +24,7 @@ export default function ChallengeLibrary({ loading, loadError, onRetry, bank, so
         <div className="difficulty-tabs" role="group" aria-label="Filter by difficulty">{['all', 'easy', 'medium', 'hard'].map(f => <button key={f} aria-pressed={filter === f} className={filter === f ? 'selected' : ''} onClick={() => setFilter(f)}>{f === 'all' ? 'All levels' : f}</button>)}</div>
         <input aria-label="Search challenges" placeholder="Search challenges…" value={search} onChange={e => setSearch(e.target.value)}/>
       </div>
-      <div className="practice-filters">
+      <p className="difficulty-guide">{filter === 'easy' ? 'Easy: one table, simple filters, sorting or a single calculation.' : filter === 'medium' ? 'Medium: grouping, joins, CASE and simple subqueries.' : filter === 'hard' ? 'Hard: window functions and analysis across groups.' : 'Easy builds the basics. Medium connects ideas. Hard combines advanced techniques.'}</p><div className="practice-filters">
         <label>Show <select aria-label="Practice status" value={status} onChange={e => setStatus(e.target.value)}><option value="all">All challenges</option><option value="unsolved">Unsolved</option><option value="solved">Solved</option><option value="bookmarked">Bookmarked</option></select></label>
         <span aria-live="polite">{visible.length} matching</span>
         <button className="arena-secondary" disabled={busy || !visible.length} onClick={() => onOpen(visible[Math.floor(Math.random() * visible.length)])}>Pick random ↗</button>

@@ -85,6 +85,32 @@ public class PracticeHubController {
         return Map.of("id", id, "title", title, "description", description, "unlocked", unlocked);
     }
 
+    @GetMapping("/daily-board")
+    @Transactional(readOnly = true)
+    public Map<String, Object> dailyBoard(@AuthenticationPrincipal User viewer) {
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        var problem = dailyProblem(today);
+        Map<UUID, Map<String, Object>> players = new HashMap<>();
+        for (var row : submissions.dailyAttempts(problem.slug(), today.atStartOfDay(), today.plusDays(1).atStartOfDay(), LocalDateTime.now(ZoneOffset.UTC))) {
+            UUID id = (UUID) row[0];
+            var player = players.computeIfAbsent(id, k -> new HashMap<>(Map.of("username", row[1], "attempts", 0, "cleared", false, "you", id.equals(viewer.getId()))));
+            if (Boolean.TRUE.equals(player.get("cleared"))) continue;
+            player.put("attempts", (Integer) player.get("attempts") + 1);
+            if ("accepted".equals(row[2])) player.put("cleared", true);
+        }
+        var ranked = players.values().stream().filter(p -> Boolean.TRUE.equals(p.get("cleared")))
+                .sorted(Comparator.<Map<String,Object>>comparingInt(p -> (Integer)p.get("attempts")).thenComparing(p -> (String)p.get("username"))).toList();
+        int rank=0, previous=-1, yourRank=0;
+        for (int i=0; i<ranked.size(); i++) {
+            var player=ranked.get(i); int count=(Integer)player.get("attempts");
+            if (count!=previous) rank=i+1;
+            previous=count; player.put("rank",rank);
+            if (Boolean.TRUE.equals(player.get("you"))) yourRank=rank;
+        }
+        return Map.of("players", ranked.stream().limit(50).toList(), "yourRank", yourRank, "totalPlayers", ranked.size(),
+                "title", problem.title(), "slug", problem.slug(), "date", today.toString(), "generatedAt", Instant.now().toString());
+    }
+
     @GetMapping("/leaderboard")
     @Transactional(readOnly = true)
     public Map<String, Object> leaderboard(@AuthenticationPrincipal User viewer) {

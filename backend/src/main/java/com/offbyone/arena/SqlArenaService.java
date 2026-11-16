@@ -78,7 +78,7 @@ public class SqlArenaService {
         List<SqlProblem> pool=new ArrayList<>(bank.findAll());Collections.shuffle(pool);
         int level = (int)Math.round(roster(r).stream().mapToInt(p -> p.getSkillLevel()).average().orElse(5));
         String difficulty = level <= 3 ? "easy" : level <= 7 ? "medium" : "hard";
-        List<SqlProblem> selected = pool.stream().sorted(Comparator.comparingInt(p -> Math.abs(List.of("easy","medium","hard").indexOf(p.difficulty()) - List.of("easy","medium","hard").indexOf(difficulty)))).limit(3).toList();
+        List<SqlProblem> selected = pool.stream().filter(p -> difficulty.equals(p.difficulty())).limit(3).toList();
         if (selected.size() < 3) throw fail(HttpStatus.SERVICE_UNAVAILABLE,"Not enough challenges at this skill level.");
         for(int round = 0; round < selected.size(); round++) {
             RoomProblem rp=new RoomProblem();rp.setRoom(r);rp.setSqlSlug(selected.get(round).slug());rp.setSortOrder(round);rp.setPoints(1);assignments.save(rp);

@@ -7,6 +7,7 @@ import ArenaVisual from '../components/ArenaVisual';
 import PracticeGuide from '../components/PracticeGuide';
 import ChallengeLibrary from '../components/ChallengeLibrary';
 import PracticeHub from '../components/PracticeHub';
+import BadgeCelebration from '../components/BadgeCelebration';
 import EditorUtilities from '../components/EditorUtilities';
 import '../engagement.css';
 
@@ -219,10 +220,10 @@ export default function SqlArena() {
   const finished = match?.status === 'finished';
   const me = match?.players.find(p => p.username === username);
   const opponent = match?.players.find(p => p.username !== username);
-  const nextUnsolved = bank.find(p => !solved.has(p.slug) && p.slug !== problem?.slug);
+  const nextUnsolved = bank.find(p => p.difficulty === problem?.difficulty && !solved.has(p.slug) && p.slug !== problem?.slug);
 
   return <>
-      {newBadges.length > 0 && <div className="badge-celebration" role="status"><div className="badge-celebration-icon" aria-hidden="true">✦</div><div><span>BADGE UNLOCKED</span><strong>{newBadges.map(b => b.title).join(' · ')}</strong><p>{newBadges.map(b => b.description).join(' ')}</p></div><button aria-label="Dismiss badge notification" onClick={() => setNewBadges([])}>×</button></div>}
+      {newBadges.length > 0 && <BadgeCelebration badges={newBadges} onClose={() => setNewBadges([])}/>}
       {error && <div className="arena-error" role="alert"><span>{error}</span><button onClick={() => setError('')} aria-label="Dismiss error">×</button></div>}
       {roomId && !match && <section className="arena-loading"><span className="judge-spinner"/> Reconnecting to your match…<button className="arena-secondary" onClick={home}>Back to arena</button></section>}
       {!roomId && !practice && <>

@@ -56,6 +56,7 @@ export const api = {
   profile: (username) => req(`/api/users/${username}/profile`),
   rivals: (username) => req(`/api/users/${username}/rivals`),
   practiceHub: () => req('/api/practice-hub'),
+  dailyBoard: () => req('/api/practice-hub/daily-board'),
   standings: () => req('/api/practice-hub/leaderboard'),
   streak: () => req('/api/streak'),
   dailyChallenge: () => req('/api/daily-challenge'),

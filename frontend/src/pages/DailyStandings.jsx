@@ -1,0 +1,12 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { api, errorMessage } from '../lib/api';
+export default function DailyStandings() {
+ const [data,setData]=useState(null),[error,setError]=useState(''),[loading,setLoading]=useState(false),[reload,setReload]=useState(0);
+ useEffect(()=>{let live=true;setLoading(true);setError('');api.dailyBoard().then(d=>{if(live)setData(d)}).catch(e=>{if(live)setError(errorMessage(e))}).finally(()=>{if(live)setLoading(false)});return()=>{live=false}},[reload]);
+ return <section className="standings-page"><div className="page-intro"><div><h1>Make the first one count.</h1><p>One shared daily problem. The fewest submissions to a correct answer wins.</p></div><button className="arena-secondary" disabled={loading} onClick={()=>setReload(n=>n+1)}>{loading?'Refreshing…':'Refresh standings ↻'}</button></div><Link className="arena-text-link" to="/leaderboard">← XP standings</Link>
+ <div className="standings-explainer"><div><span className="arena-eyebrow">YOUR POSITION</span><strong>{data?.yourRank?`#${data.yourRank}`:'Unranked'}</strong><p>{data?.totalPlayers || 0} active guests have cleared today’s problem.</p></div><div><span className="arena-eyebrow">PRECISION WINS</span><p>Every submitted query up to your first correct answer counts. Sample runs are free. Equal attempt counts share a rank; later retries cannot improve it.</p></div><div><span className="arena-eyebrow">TODAY’S CHALLENGE</span><p>{data?.title || 'Loading…'}</p>{data && <Link className="arena-primary" to={`/?challenge=${encodeURIComponent(data.slug)}`}>Play today’s challenge →</Link>}</div></div>
+ <p className="difficulty-guide">Resets at midnight UTC. Only active guest passes appear. New passes start fresh, so this is friendly competition, not a verified identity ranking.</p>
+ {error && <p className="hub-notice" role="alert">{error}</p>}{loading&&!data&&<p role="status">Loading the daily board…</p>}
+ {data && <div className="standings-table-wrap"><table className="standings-table"><thead><tr><th>Rank</th><th>Player</th><th>Submissions to clear</th></tr></thead><tbody>{data.players.map(p=><tr key={p.username} className={p.you?'your-standing':''}><td>#{p.rank}</td><th scope="row">{p.username} {p.you&&'· You'}</th><td>{p.attempts}</td></tr>)}{!data.players.length&&<tr><td colSpan="3">The board is open. Clear today’s challenge to take your place.</td></tr>}</tbody></table></div>}</section>;
+}
