@@ -1,4 +1,4 @@
-const keys = ['token', 'username', 'expiresAt', 'skillLevel'];
+const keys = ['token', 'username', 'displayName', 'expiresAt', 'skillLevel'];
 export function updateSession(values) {
   for (const key of keys) if (values[key] !== undefined) localStorage.setItem(key, String(values[key]));
   window.dispatchEvent(new Event('obo:session'));
@@ -14,3 +14,5 @@ export function downloadFile(name, text, type = 'text/plain') {
   const link = document.createElement('a'); link.href = url; link.download = name; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+export function guestName() { return localStorage.getItem("displayName") || (localStorage.getItem("username") || "Guest").split("~")[0]; }

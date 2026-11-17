@@ -93,7 +93,7 @@ public class PracticeHubController {
         Map<UUID, Map<String, Object>> players = new HashMap<>();
         for (var row : submissions.dailyAttempts(problem.slug(), today.atStartOfDay(), today.plusDays(1).atStartOfDay(), LocalDateTime.now(ZoneOffset.UTC))) {
             UUID id = (UUID) row[0];
-            var player = players.computeIfAbsent(id, k -> new HashMap<>(Map.of("username", row[1], "attempts", 0, "cleared", false, "you", id.equals(viewer.getId()))));
+            var player = players.computeIfAbsent(id, k -> new HashMap<>(Map.of("username", row[1], "displayName", User.displayName((String)row[1]), "attempts", 0, "cleared", false, "you", id.equals(viewer.getId()))));
             if (Boolean.TRUE.equals(player.get("cleared"))) continue;
             player.put("attempts", (Integer) player.get("attempts") + 1);
             if ("accepted".equals(row[2])) player.put("cleared", true);
@@ -119,7 +119,7 @@ public class PracticeHubController {
             var problem = bank.findBySlug((String) row[2]);
             if (problem.isEmpty()) continue;
             UUID id = (UUID) row[0];
-            var player = players.computeIfAbsent(id, key -> new HashMap<>(Map.of("username", row[1], "xp", 0, "solved", 0, "you", id.equals(viewer.getId()))));
+            var player = players.computeIfAbsent(id, key -> new HashMap<>(Map.of("username", row[1], "displayName", User.displayName((String)row[1]), "xp", 0, "solved", 0, "you", id.equals(viewer.getId()))));
             player.put("xp", (Integer) player.get("xp") + points(problem.get()));
             player.put("solved", (Integer) player.get("solved") + 1);
         }

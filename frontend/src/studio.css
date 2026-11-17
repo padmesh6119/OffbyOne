@@ -201,3 +201,10 @@ body {font-size:14px;-webkit-font-smoothing:antialiased;}
   .session-card {gap:23px;padding-inline:22px;}.session-mini-stats {gap:20px;padding-left:23px;}.session-card .player-level {max-width:440px;}.level-caption {flex-direction:row;align-items:center;}
   .learning-path {padding:22px 18px;}.learning-path h3 {font-size:20px;}.learning-paths {gap:12px;}.editor-actions>span {font-size:9px;}.editor-actions button {padding-inline:12px;}.challenge-name strong {font-size:14px;}
 }
+
+.duel-format-picker {border:0;padding:0;margin:20px 0 0;display:flex;gap:6px;flex-wrap:wrap;}
+.duel-format-picker legend {font-size:12px;color:#b7c0ae;margin-bottom:9px;}
+.duel-format-picker button {background:#182017;border:1px solid #526344;color:#d7dfce;border-radius:5px;padding:8px 12px;font-size:12px;}
+.duel-format-picker button[aria-pressed=true] {background:#d8fc86;color:#202719;border-color:#d8fc86;}
+.duel-format-picker button:hover {border-color:#d8fc86;}
+.round-pips {flex-wrap:wrap;justify-content:center;max-width:260px;}

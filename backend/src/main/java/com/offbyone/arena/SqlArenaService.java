@@ -50,9 +50,16 @@ public class SqlArenaService {
         broadcast("/topic/room/" + r.getId() + "/lobby", Map.of("event", "joined", "username", u.getDisplayName()));
     }
     private List<RoomParticipant> roster(Room r) { return players.findByRoomIdOrderByScoreDescLastSolveAtAsc(r.getId()); }
-    public Map<String,Object> create(User user) { return snapshot(createRoom(user,null),user); }
-    private Room createRoom(User user,String code) {
-        Room r=new Room();r.setHost(user);r.setName("SQL Arena");r.setTrack("sql-arena");r.setProblemCount(1);
+    public Map<String,Object> create(User user) { return create(user,3); }
+    public Map<String,Object> create(User user,int bestOf) {
+        if (!List.of(3,5,7).contains(bestOf)) throw fail(HttpStatus.BAD_REQUEST,"Choose best of 3, 5 or 7.");
+        return snapshot(createRoom(user,null,bestOf),user);
+    }
+    // Older SQL arena rooms stored 1 here; they retain the original best-of-three rules.
+    private int bestOf(Room r) { return r.getProblemCount()==5 || r.getProblemCount()==7 ? r.getProblemCount() : 3; }
+    private int winsRequired(Room r) { return bestOf(r)/2+1; }
+    private Room createRoom(User user,String code,int bestOf) {
+        Room r=new Room();r.setHost(user);r.setName("SQL Arena");r.setTrack("sql-arena");r.setProblemCount(bestOf);
         r.setJoinCode(code==null ? UUID.randomUUID().toString().replace("-", "").substring(0,8).toUpperCase(Locale.ROOT) : code);
         r=rooms.save(r); add(r,user);return r;
     }
@@ -78,8 +85,8 @@ public class SqlArenaService {
         List<SqlProblem> pool=new ArrayList<>(bank.findAll());Collections.shuffle(pool);
         int level = (int)Math.round(roster(r).stream().mapToInt(p -> p.getSkillLevel()).average().orElse(5));
         String difficulty = level <= 3 ? "easy" : level <= 7 ? "medium" : "hard";
-        List<SqlProblem> selected = pool.stream().filter(p -> difficulty.equals(p.difficulty())).limit(3).toList();
-        if (selected.size() < 3) throw fail(HttpStatus.SERVICE_UNAVAILABLE,"Not enough challenges at this skill level.");
+        List<SqlProblem> selected = pool.stream().filter(p -> difficulty.equals(p.difficulty())).limit(bestOf(r)).toList();
+        if (selected.size() < bestOf(r)) throw fail(HttpStatus.SERVICE_UNAVAILABLE,"Not enough challenges at this skill level.");
         for(int round = 0; round < selected.size(); round++) {
             RoomProblem rp=new RoomProblem();rp.setRoom(r);rp.setSqlSlug(selected.get(round).slug());rp.setSortOrder(round);rp.setPoints(1);assignments.save(rp);
         }
@@ -98,7 +105,7 @@ public class SqlArenaService {
         broadcast("/topic/room/" + r.getId() + "/finished", Map.of("event", "finished", "winner", r.getWinner()==null ? "" : r.getWinner().getDisplayName()));
     }
     private void endRound(Room r) {
-        if(r.getRoundsPlayed()>=3 || roster(r).stream().anyMatch(p->p.getScore()>=2)) finish(r);
+        if(r.getRoundsPlayed()>=bestOf(r) || roster(r).stream().anyMatch(p->p.getScore()>=winsRequired(r))) finish(r);
         else {
             r.setStatus("intermission");r.setEndTime(now().plusSeconds(5));rooms.save(r);
             broadcast("/topic/room/" + r.getId() + "/lobby", Map.of("event", "intermission", "round", r.getRoundsPlayed()));
@@ -140,18 +147,19 @@ public class SqlArenaService {
         Room r=locked(id,user);
         if(!"finished".equals(r.getStatus())) throw fail(HttpStatus.CONFLICT,"Finish this match first.");
         String code="R"+r.getId().toString().replace("-", "").toUpperCase(Locale.ROOT);
-        Room next=rooms.findByJoinCode(code).orElseGet(()->createRoom(user,code));
+        Room next=rooms.findByJoinCode(code).orElseGet(()->createRoom(user,code,bestOf(r)));
         next=rooms.lockById(next.getId()).orElseThrow();add(next,user);
         broadcast("/topic/room/" + id + "/lobby", Map.of("event", "rematch", "code", next.getJoinCode(), "nextId", next.getId().toString()));
         return snapshot(next,user);
     }
     private Map<String,Object> snapshot(Room r,User user) {
         Map<String,Object> out=new LinkedHashMap<>();
+        out.put("bestOf",bestOf(r));out.put("winsRequired",winsRequired(r));
         out.put("id",r.getId());out.put("code",r.getJoinCode());out.put("status",r.getStatus());out.put("round",r.getRoundsPlayed());
         out.put("serverTime",now().toInstant(ZoneOffset.UTC).toString());
         out.put("deadline",r.getEndTime()==null ? null : r.getEndTime().toInstant(ZoneOffset.UTC).toString());
-        out.put("host",r.getHost().getDisplayName());out.put("winner",r.getWinner()==null ? null : r.getWinner().getDisplayName());
-        out.put("players",roster(r).stream().map(p->Map.of("username",p.getUser().getDisplayName(),"score",p.getScore(),"skillLevel",p.getSkillLevel())).toList());
+        out.put("host",r.getHost().getUsername());out.put("hostName",r.getHost().getDisplayName());out.put("winner",r.getWinner()==null ? null : r.getWinner().getUsername());out.put("winnerName",r.getWinner()==null ? null : r.getWinner().getDisplayName());
+        out.put("players",roster(r).stream().map(p->Map.of("username",p.getUser().getUsername(),"displayName",p.getUser().getDisplayName(),"score",p.getScore(),"skillLevel",p.getSkillLevel())).toList());
         var attempts=submissions.findByRoomId(r.getId());
         List<Map<String,Object>> history=new ArrayList<>();
         for(RoomProblem rp:assignments.findByRoomIdOrderBySortOrderAsc(r.getId())) {

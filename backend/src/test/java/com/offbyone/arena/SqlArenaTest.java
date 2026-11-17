@@ -47,10 +47,11 @@ class SqlArenaTest {
    a.setUsername("reuse_"+UUID.randomUUID().toString().substring(0,8));
    a.setSessionExpiresAt(LocalDateTime.now(ZoneOffset.UTC).minusSeconds(1));users.save(a);
    String originalEmail=a.getEmail();String name=a.getUsername();
-   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content("{\"username\":\""+name+"\",\"skillLevel\":\"7\"}"))
-     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
-   assertNotEquals(a.getId(),users.findByUsername(name).orElseThrow().getId());
-   assertEquals(7,users.findByUsername(name).orElseThrow().getSkillLevel());
+   String joined=http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content("{\"username\":\""+name+"\",\"skillLevel\":\"7\"}"))
+     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andReturn().getResponse().getContentAsString();
+   String key=new com.fasterxml.jackson.databind.ObjectMapper().readTree(joined).get("username").asText();
+   assertNotEquals(a.getId(),users.findByUsername(key).orElseThrow().getId());
+   assertEquals(7,users.findByUsername(key).orElseThrow().getSkillLevel());
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems").header("Authorization","Bearer "+jwt.generate(originalEmail)))
      .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
  }
@@ -79,13 +80,18 @@ class SqlArenaTest {
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/sql-problems").header("Authorization", "Bearer " + jwt.generate(a.getEmail())))
      .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
  }
- @Test void existingGuestCannotBeClaimed() throws Exception {
-   String name="guest_"+UUID.randomUUID().toString().substring(0,8);
-   String body="{\"username\":\""+name+"\"}";
-   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content(body))
-     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
-   http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content(body))
-     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isConflict());
+ @Test void duplicateGuestNamesCreateSeparatePasses() throws Exception {
+   String body="{\"username\":\"SameName\"}";
+   var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+   var first=mapper.readTree(http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content(body)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andReturn().getResponse().getContentAsString());
+   var second=mapper.readTree(http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/join").contentType("application/json").content(body)).andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk()).andReturn().getResponse().getContentAsString());
+   assertEquals("SameName",first.get("displayName").asText());assertEquals(first.get("displayName"),second.get("displayName"));
+   assertNotEquals(first.get("username"),second.get("username"));assertNotEquals(first.get("token"),second.get("token"));
+   var one=users.findByUsername(first.get("username").asText()).orElseThrow();var two=users.findByUsername(second.get("username").asText()).orElseThrow();
+   var match=arena.create(one,7);arena.join((String)match.get("code"),two);var started=arena.start(id(match),one);
+   assertEquals(one.getUsername(),started.get("host"));assertNotEquals(one.getId(),two.getId());
+   var result=arena.leave(id(match),two);assertEquals(one.getUsername(),result.get("winner"));assertEquals("SameName",result.get("winnerName"));
+   assertTrue(submissions.findByUserId(two.getId()).isEmpty());
  }
  @Test void practicePersistsOnlySubmissionsAndRejectsNullInput() throws Exception {
    var auth="Bearer "+jwt.generate(a.getEmail());
@@ -152,6 +158,44 @@ class SqlArenaTest {
     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
    http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/auth/logout"))
     .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isUnauthorized());
+ }
+
+ @Test void longerFormatsSelectUniqueProblemsFinishAtMajorityAndKeepRematchFormat() {
+  for(int length:List.of(5,7)) {
+   var m=arena.create(a,length);UUID room=id(m);arena.join((String)m.get("code"),b);m=arena.start(room,a);
+   assertEquals(length,arena.state(room,b).get("bestOf"));
+   var selected=assignments.findByRoomIdOrderBySortOrderAsc(room);
+   assertEquals(length,selected.size());assertEquals(length,selected.stream().map(RoomProblem::getSqlSlug).distinct().count());
+   int target=length/2+1;assertEquals(target,m.get("winsRequired"));
+   for(int round=1;round<=target;round++) {
+    arena.submit(room,a,round,solution(m));m=arena.state(room,b);
+    if(round<target){assertEquals("intermission",m.get("status"));expire(room);m=arena.state(room,a);}
+   }
+   assertEquals("finished",m.get("status"));assertEquals(a.getUsername(),m.get("winner"));
+   var rematch=arena.rematch(room,b);assertEquals(length,rematch.get("bestOf"));
+   assertEquals(id(rematch),id(arena.rematch(room,a)));
+  }
+ }
+ @Test void longerFormatsRespectRoundLimitWithDraws() {
+  for(int length:List.of(5,7)) {
+   var m=arena.create(a,length);UUID room=id(m);arena.join((String)m.get("code"),b);m=arena.start(room,a);
+   for(int round=1;round<=length;round++) {
+    expire(room);m=arena.state(room,a);
+    if(round<length){assertEquals("intermission",m.get("status"));expire(room);m=arena.state(room,a);}
+   }
+   assertEquals("finished",m.get("status"));assertNull(m.get("winner"));assertEquals(length,m.get("round"));
+  }
+ }
+ @Test void legacyRoomsAndCreationValidation() throws Exception {
+  var m=arena.create(a);var room=rooms.findById(id(m)).orElseThrow();room.setProblemCount(1);rooms.save(room);
+  assertEquals(3,arena.state(id(m),a).get("bestOf"));
+  for(int bad:List.of(-1,0,1,2,4,6,8,100)) assertThrows(ResponseStatusException.class,()->arena.create(a,bad));
+  String auth="Bearer "+jwt.generate(a.getEmail());
+  http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/sql-arena").header("Authorization",auth).contentType("application/json").content("{\"bestOf\":7}"))
+   .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk())
+   .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath("$.bestOf").value(7));
+  http.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/sql-arena").header("Authorization",auth).contentType("application/json").content("{\"bestOf\":4}"))
+   .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isBadRequest());
  }
 
 }

@@ -32,7 +32,7 @@ export const api = {
   session: () => req('/api/auth/session'),
   updateSession: (skillLevel) => req('/api/auth/session', { method: 'PATCH', body: JSON.stringify({skillLevel: String(skillLevel)}) }),
   logout: () => req('/api/auth/logout', {method:'POST'}),
-  arenaCreate: () => req('/api/sql-arena', { method: 'POST' }),
+  arenaCreate: (bestOf = 3) => req('/api/sql-arena', { method: 'POST', body: JSON.stringify({ bestOf }) }),
   arenaJoin: (code) => req(`/api/sql-arena/join/${encodeURIComponent(code)}`, { method: 'POST' }),
   arenaState: (id) => req(`/api/sql-arena/${id}`),
   arenaAction: (id, action, body = {}) => req(`/api/sql-arena/${id}/${action}`, { method: 'POST', body: JSON.stringify(body) }),

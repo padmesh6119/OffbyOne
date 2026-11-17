@@ -73,7 +73,7 @@ public class ProfileController {
             for (RoomParticipant mine : participantRepo.findByUserId(user.getId())) {
                 Room room = mine.getRoom();
                 if (!"finished".equals(room.getStatus())) continue;
-                boolean isDuel = room.getProblemCount() == 1;
+                boolean isDuel = "sql-arena".equals(room.getTrack()) || room.getProblemCount() == 1;
                 if (isDuel && room.getWinner() == null) continue;
 
                 for (RoomParticipant other : participantRepo.findByRoomIdOrderByScoreDesc(room.getId())) {
@@ -93,7 +93,7 @@ public class ProfileController {
             }
 
             List<Map<String, Object>> rivals = tally.entrySet().stream()
-                    .map(e -> Map.<String, Object>of("username", e.getKey(), "wins", e.getValue()[0],
+                    .map(e -> Map.<String, Object>of("username", e.getKey(), "displayName", User.displayName(e.getKey()), "wins", e.getValue()[0],
                             "losses", e.getValue()[1], "matches", e.getValue()[0] + e.getValue()[1]))
                     .sorted((a, b) -> (Integer) b.get("matches") - (Integer) a.get("matches"))
                     .toList();

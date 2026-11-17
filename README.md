@@ -1,6 +1,6 @@
 # OffbyOne — SQL Arena
 
-SQL-only guest arena: choose a name and a self-rated skill from 1–10. Guest passes last 24 hours; expired names are released automatically and can be reused by a new guest. Historical records stay attached to the original guest ID, so reusing a name never grants access to someone else's history. There is no password or account login.
+SQL-only guest arena: choose a name and a self-rated skill from 1–10. Guest passes last 24 hours. Display names may be shared: every entry creates a distinct guest identity. Historical records stay attached to the original guest ID, so reusing a name never grants access to someone else's history. There is no password or account login.
 
 Private duels use the rounded average of both players' levels. New guest passes default to level 1. Levels 1–3 select easy questions, 4–7 medium, and 8–10 hard. Each tier has enough questions for three unique challenges at the selected difficulty. Both players face identical questions. Levels can be adjusted in the lobby and lock when a match starts. This is self-rated difficulty matching for invite duels, not an automatic public matchmaking queue or ranked rating system.
 
@@ -10,7 +10,7 @@ The production startup applies `backend/src/main/resources/db/arena-upgrade.sql`
 
 The SQL editor supports a full-width focus mode, Ctrl/Cmd+Enter to run samples, and Ctrl/Cmd+Shift+Enter to submit.
 
-The SQL arena includes private invite links, best-of-three friendly duels, five-minute rounds, server-owned scores, browser draft recovery, shared rematch lobbies, and post-match explanations. Two wins end a match early. A timeout draws that round; after three rounds the higher score wins, or the match is drawn. Leaving forfeits the match. Friendly arena matches do not change Elo.
+The SQL arena includes private invite links, best-of-3, best-of-5, or best-of-7 friendly duels, five-minute rounds, server-owned scores, browser draft recovery, shared rematch lobbies, and post-match explanations. The first to 2, 3, or 4 wins respectively ends a match early. A timeout draws that round; at the selected round limit the higher score wins, or the match is drawn. Rematches retain the selected format. Older rooms keep best-of-three rules. Leaving forfeits the match. Friendly arena matches do not change Elo.
 
 The bank contains 184 SQL challenges spanning foundations, grouping, joins, conditional expressions, subqueries and windows. Easy questions use one table and cover SELECT, WHERE, ORDER BY, DISTINCT, LIMIT, COUNT, SUM, MIN, MAX, AND/OR, BETWEEN, IN, LIKE, IS NULL, and arithmetic; they require no joins, subqueries, or window functions. The original 12 questions are now medium or hard. Each challenge has a public dataset and four additional datasets covering changed values, boundaries or duplicates, sparse data, and empty tables. Practice also supports bookmarks for the current guest pass in this browser, solved/unsolved/bookmarked filters, a completion bar, and a random challenge drawn from the visible filtered results. A new guest pass clears bookmarks for that name. Practice includes a per-question hint, expected public sample output, and a SQL quick reference. An accepted practice submission unlocks an explained reference solution and a Next unsolved challenge button; these learning panels are absent during duels. Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
 
@@ -26,7 +26,7 @@ The preview runs on port 8087 and uses a separate H2 database at `/tmp/offbyone-
 From `frontend`, run `npm ci`, then `VITE_API_URL=http://127.0.0.1:8087 npm run dev -- --host 127.0.0.1 --port 5177`.
 Open `http://127.0.0.1:5177/#/sql`. Use a second browser profile or private window as the opponent.
 
-Guest names must be unique while their pass is active. A new pass cannot reclaim an active name. Keep browser storage to resume an unexpired pass.
+Anyone can use the same display name, even while another guest is active. Each pass keeps separate progress and match membership. Keep browser storage to resume an unexpired pass.
 
 ## Verification
 

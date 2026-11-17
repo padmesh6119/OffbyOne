@@ -12,7 +12,8 @@ public class SqlArenaController {
     public record Skill(int level) {}
     @PostMapping("/{id}/skill") public Map<String,Object> skill(@PathVariable UUID id,@RequestBody Skill skill,@AuthenticationPrincipal User user) {return arena.skill(id,user,skill.level());}
     public record Query(int round,String query) {}
-    @PostMapping public Map<String,Object> create(@AuthenticationPrincipal User u) {limit.check(u);return arena.create(u);}
+    public record Format(Integer bestOf) {}
+    @PostMapping public Map<String,Object> create(@RequestBody(required=false) Format format,@AuthenticationPrincipal User u) {limit.check(u);return arena.create(u,format==null || format.bestOf()==null ? 3 : format.bestOf());}
     @PostMapping("/join/{code}") public Map<String,Object> join(@PathVariable String code,@AuthenticationPrincipal User u) {limit.check(u);return arena.join(code,u);}
     @GetMapping("/{id}") public Map<String,Object> state(@PathVariable UUID id,@AuthenticationPrincipal User u) {return arena.state(id,u);}
     @PostMapping("/{id}/start") public Map<String,Object> start(@PathVariable UUID id,@AuthenticationPrincipal User u) {return arena.start(id,u);}

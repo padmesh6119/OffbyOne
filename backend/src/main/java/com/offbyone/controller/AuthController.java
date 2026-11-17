@@ -25,7 +25,7 @@ public class AuthController {
     @GetMapping("/session")
     public ResponseEntity<?> session(@org.springframework.security.core.annotation.AuthenticationPrincipal User user) {
         if (user == null) return ResponseEntity.status(401).body(Map.of("message", "Your guest pass has ended."));
-        return ResponseEntity.ok(Map.of("username", user.getUsername(), "skillLevel", user.getSkillLevel(),
+        return ResponseEntity.ok(Map.of("username", user.getUsername(), "displayName", user.getDisplayName(), "skillLevel", user.getSkillLevel(),
                 "expiresAt", user.getSessionExpiresAt() == null ? "" : user.getSessionExpiresAt().toInstant(java.time.ZoneOffset.UTC).toString()));
     }
 
@@ -77,15 +77,14 @@ public class AuthController {
         final String username = raw.trim();
 
         if (!username.matches("[a-zA-Z0-9_-]{2,20}")) return ResponseEntity.badRequest().body("Use 2–20 letters, numbers, underscores or hyphens.");
-        if (userRepo.findByUsername(username).isPresent()) return ResponseEntity.status(409).body("That name belongs to an active guest. Choose another name or resume in your original browser.");
         User user = new User();
-        user.setUsername(username);
+        user.setUsername(username + "~" + UUID.randomUUID().toString());
         user.setSkillLevel(skill);
         user.setSessionExpiresAt(java.time.LocalDateTime.now(java.time.ZoneOffset.UTC).plusNanos(jwtUtil.expiryMs() * 1000000));
         user.setEmail(UUID.randomUUID() + "@offbyone.local");
         user.setPasswordHash(UUID.randomUUID().toString());
         user = userRepo.save(user);
 
-        return ResponseEntity.ok(Map.of("token", jwtUtil.generate(user.getEmail()), "username", user.getUsername(), "skillLevel", skill, "expiresAt", user.getSessionExpiresAt().toInstant(java.time.ZoneOffset.UTC).toString()));
+        return ResponseEntity.ok(Map.of("token", jwtUtil.generate(user.getEmail()), "username", user.getUsername(), "displayName", user.getDisplayName(), "skillLevel", skill, "expiresAt", user.getSessionExpiresAt().toInstant(java.time.ZoneOffset.UTC).toString()));
     }
 }

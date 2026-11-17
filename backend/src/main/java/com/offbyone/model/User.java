@@ -24,7 +24,8 @@ public class User {
     public LocalDateTime getSessionExpiresAt() { return sessionExpiresAt; }
     public void setSessionExpiresAt(LocalDateTime value) { sessionExpiresAt = value; }
     public boolean sessionExpired() { return sessionExpiresAt != null && !sessionExpiresAt.isAfter(LocalDateTime.now(java.time.ZoneOffset.UTC)); }
-    public String getDisplayName() { return username.startsWith("~expired~") ? "Expired guest" : username; }
+    public static String displayName(String key) { return key.startsWith("~expired~") ? "Expired guest" : key.split("~",2)[0]; }
+    public String getDisplayName() { return displayName(username); }
 
     public UUID getId() { return id; }
     public String getUsername() { return username; }
