@@ -48,6 +48,7 @@ export default function PracticeHub({ bank, solved, busy, onOpen, children, libr
     {data && <div className="session-card" aria-label="Your progress">
       <PlayerLevel data={data}/><div className="session-mini-stats"><span><strong>{data.solved.length}</strong> solved</span><span><strong>{data.badges.filter(b => b.unlocked).length}/{data.badges.length}</strong> badges</span></div><Link to="/profile" className="arena-text-link">My progress ↗</Link>
     </div>}
+    <div className="training-shortcuts"><Link to="/sprint"><strong>SQL sprint <span>↗</span></strong><span>Beat the clock. Set a personal best.</span></Link><Link to="/training"><strong>Your training <span>↗</span></strong><span>Revisit mistakes and find your next challenge.</span></Link></div>
     <section className="practice-hub" id="practice" aria-label="Practice challenges and learning paths">
       <div className="practice-browser-heading"><h2>Build your edge.</h2><div className="practice-view" role="group" aria-label="Practice view"><button aria-pressed={view === 'challenges'} onClick={() => setView('challenges')}>All challenges</button><button aria-pressed={view === 'paths'} onClick={() => setView('paths')}>Learning paths</button></div></div>
       <div hidden={view !== 'challenges'}>{library}</div>

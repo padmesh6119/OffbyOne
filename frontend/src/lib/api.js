@@ -10,7 +10,7 @@ function headers() {
 }
 
 async function req(path, options = {}) {
-  const requestHeaders = headers();
+  const requestHeaders = path === '/api/auth/join' ? { 'Content-Type': 'application/json' } : headers();
   if (!navigator.onLine) throw new Error('You are offline. Reconnect and try again.');
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 180000);
@@ -18,7 +18,7 @@ async function req(path, options = {}) {
   try { res = await fetch(BASE + path, { ...options, headers: requestHeaders, signal: controller.signal }); }
   catch (e) { throw new Error(e.name === 'AbortError' ? 'The server is taking too long. Please try again; free hosting can take a moment to wake up.' : 'Could not reach the server. Check your connection and try again.'); }
   finally { clearTimeout(timeout); }
-  if (res.status === 401 && requestHeaders.Authorization === headers().Authorization) {
+  if (res.status === 401 && requestHeaders.Authorization && requestHeaders.Authorization === headers().Authorization) {
     const next = location.hash.slice(1) || '/';
     clearSession();
     location.replace(`${location.pathname}#/join?expired=1&next=${encodeURIComponent(next)}`);
@@ -29,6 +29,17 @@ async function req(path, options = {}) {
 }
 
 export const api = {
+  // A read-only request starts the free server while the guest fills out the form.
+  health: async () => {
+    const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 8000);
+    try { const res = await fetch(BASE + '/health', { signal: controller.signal }); return res.ok; }
+    catch { return false; } finally { clearTimeout(timer); }
+  },
+  insights: () => req('/api/practice-insights'),
+  sprints: () => req('/api/sql-sprints'),
+  sprintCreate: (minutes, difficulty) => req('/api/sql-sprints', {method:'POST', body:JSON.stringify({minutes,difficulty})}),
+  sprintState: id => req(`/api/sql-sprints/${id}`),
+  sprintAction: (id, action, body = {}) => req(`/api/sql-sprints/${id}/${action}`, {method:'POST',body:JSON.stringify(body)}),
   session: () => req('/api/auth/session'),
   updateSession: (skillLevel) => req('/api/auth/session', { method: 'PATCH', body: JSON.stringify({skillLevel: String(skillLevel)}) }),
   logout: () => req('/api/auth/logout', {method:'POST'}),

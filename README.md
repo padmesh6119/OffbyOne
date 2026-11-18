@@ -6,13 +6,13 @@ Private duels use the rounded average of both players' levels. New guest passes 
 
 Light and dark themes are available on entry and in the workspace, persist in the browser, and include the SQL editor. Java routes and navigation are removed for now; the older backend and records remain for future work.
 
-The production startup applies `backend/src/main/resources/db/arena-upgrade.sql` before Hibernate validates the schema. The transactional, versioned upgrade widens legacy submission language/verdict checks while preserving earlier allowed values, and adds guest expiry and skill fields. An advisory lock serializes concurrent startup migrations. Repeated starts skip applied migrations. Production credentials must own these tables or have ALTER privileges.
+The production startup applies `backend/src/main/resources/db/arena-upgrade.sql` before Hibernate validates the schema. The transactional, versioned upgrade widens legacy submission language/verdict checks while preserving earlier allowed values, adds guest expiry and skill fields, and permits the persisted SQL sprint track. An advisory lock serializes concurrent startup migrations. Repeated starts skip applied migrations. Production credentials must own these tables or have ALTER privileges.
 
 The SQL editor supports a full-width focus mode, Ctrl/Cmd+Enter to run samples, and Ctrl/Cmd+Shift+Enter to submit.
 
 The SQL arena includes private invite links, best-of-3, best-of-5, or best-of-7 friendly duels, five-minute rounds, server-owned scores, browser draft recovery, shared rematch lobbies, and post-match explanations. The first to 2, 3, or 4 wins respectively ends a match early. A timeout draws that round; at the selected round limit the higher score wins, or the match is drawn. Rematches retain the selected format. Older rooms keep best-of-three rules. Leaving forfeits the match. Friendly arena matches do not change Elo.
 
-The bank contains 184 SQL challenges spanning foundations, grouping, joins, conditional expressions, subqueries and windows. Easy questions use one table and cover SELECT, WHERE, ORDER BY, DISTINCT, LIMIT, COUNT, SUM, MIN, MAX, AND/OR, BETWEEN, IN, LIKE, IS NULL, and arithmetic; they require no joins, subqueries, or window functions. The original 12 questions are now medium or hard. Each challenge has a public dataset and four additional datasets covering changed values, boundaries or duplicates, sparse data, and empty tables. Practice also supports bookmarks for the current guest pass in this browser, solved/unsolved/bookmarked filters, a completion bar, and a random challenge drawn from the visible filtered results. A new guest pass clears bookmarks for that name. Practice includes a per-question hint, expected public sample output, and a SQL quick reference. An accepted practice submission unlocks an explained reference solution and a Next unsolved challenge button; these learning panels are absent during duels. Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
+The bank contains 184 SQL challenges spanning foundations, grouping, joins, conditional expressions, subqueries and windows. Easy questions use one table and cover SELECT, WHERE, ORDER BY, DISTINCT, LIMIT, COUNT, SUM, MIN, MAX, AND/OR, BETWEEN, IN, LIKE, IS NULL, and arithmetic; they require no joins, subqueries, or window functions. The original 12 questions are now medium or hard. Each challenge has a public dataset and four additional datasets covering changed values, boundaries or duplicates, sparse data, and empty tables. Practice supports bookmarks, solved/unsolved/bookmarked status, topic filters, title or difficulty sorting, a completion bar, and a random challenge drawn from the visible results. It also includes private browser notes and a shareable challenge link that never exposes notes or queries. Practice includes a per-question hint, expected public sample output, and a SQL quick reference. An accepted practice submission unlocks an explained reference solution and a Next unsolved challenge button; these learning panels are absent during duels. Run Sample checks only the public data. Submit checks all datasets and saves the attempt. Hidden results and reference queries are not returned during a match. The arena uses SQLite semantics, not PostgreSQL semantics.
 
 ## Local preview without cloud credentials
 
@@ -33,13 +33,14 @@ Anyone can use the same display name, even while another guest is active. Each p
 - Backend: `mvn test` from `backend`.
 - Frontend: `npm run build` from `frontend`.
 - Browser integration: with both preview processes running, install Python Playwright and its Chromium browser, then run `python3 scripts/check_sql_arena.py` from the repository root. Set `ARENA_CHROMIUM` to use an existing Chromium executable. Screenshots go to `/tmp/offbyone-screenshots` by default (`ARENA_SCREENSHOTS` overrides it).
+- Production-schema upgrade: start the disposable `offbyone-constraint-check` Postgres container, then run `python3 scripts/check_schema_upgrade.py` from the repository root.
 - SQL equivalence checks: `python3 tools/verify_sql_equivalence.py`.
 
 Tests cover SQL typing, NULLs, duplicates, ordering, overflow, execution budgets, sample-only versus hidden judging, match permissions, simultaneous submissions, timeout draws, stale rounds, finalization, and shared rematches. Browser checks use real API calls and two independent sessions.
 
 ## Deployment and limits
 
-Keep the existing managed PostgreSQL deployment for production. The new arena reuses the existing schema: `rooms.track` is `sql-arena`, `end_time` is the current round/intermission deadline, and `intermission` is an additional room status. The startup migration updates legacy constraints and adds guest/skill columns. The preview profile is local development only.
+Keep the existing managed PostgreSQL deployment for production. Duels use `rooms.track = sql-arena`; solo sprints use `rooms.track = sql-sprint`. Both persist their server-owned deadline in `end_time`; `intermission` is an additional duel state. The startup migration updates legacy constraints and adds guest/skill columns. The preview profile is local development only.
 
 Use the repository-root `render.yaml` for Render (the obsolete backend-only blueprint has been removed). It defines a Docker backend rooted at `backend` and a static frontend rooted at `frontend`. For existing services, apply these settings in their dashboard as well: backend health check `/health`; frontend build `npm ci && npm run build`, publish directory `dist`, and rewrite `/*` to `/index.html`.
 
@@ -79,7 +80,7 @@ These features use existing SQL submissions and the existing database; they requ
 
 ### Session and workspace controls
 
-- The player menu links to progress, settings, help, and logout. Logout revokes the guest pass on the server, releases its name immediately, forfeits unfinished SQL duels, and clears that pass's local drafts, bookmarks, and remembered match. A new pass starts fresh.
+- The player menu links to progress, settings, help, and logout. Logout revokes the guest pass on the server, releases its name immediately, forfeits unfinished SQL duels, and clears that pass's local drafts, notes, goals, bookmarks, and remembered match. A new pass starts fresh.
 - Session time remaining is shown only near expiry. Expiry and logout synchronize across browser tabs, with an export reminder during the final 15 minutes.
 - Settings save the SQL level for future duels and browser preferences for theme, font size, word wrapping, line numbers, and reduced animations.
 - The local draft manager supports review, SQL downloads, opening drafts in practice, and confirmed deletion. The editor supports importing .sql/.txt files up to 16 KB, downloading SQL, and confirmed reset.
@@ -89,3 +90,9 @@ These features use existing SQL submissions and the existing database; they requ
 The daily board ranks active guests by submitted attempts through their first accepted solo answer to today's shared problem. Samples do not count; later retries cannot improve the score. Equal counts share a rank. Results reset at midnight UTC. Guests can start over with new passes, so this remains friendly competition. The daily board uses existing submissions and requires no new database table or paid service.
 
 Difficulty tiers are strict for duels. Easy covers single-table selection, filtering, sorting and basic calculations; medium includes grouping, joins, CASE and simple subqueries; hard covers windows and multi-step analysis. Next-unsolved practice stays in the selected problem's tier. The bank expansion source is `tools/expand_sql_bank.py`; original curated problems are retained. Every reference answer is checked against its sample and hidden datasets by `SqlJudgeTest`.
+
+### Training and SQL sprints
+
+- The Training page recommends three unsolved challenges at the guest's selected level, prioritizing unfinished attempts and topics that need practice. It includes a seven-day solve activity view, per-topic completion and accuracy, a locally saved daily solve goal, and a queue of unsolved attempted challenges. A challenge leaves that queue as soon as it is accepted.
+- SQL sprints are private, solo, and selectable at 5, 10, or 15 minutes and easy, medium, or hard. A sprint samples unique questions at that exact tier, keeps its deadline, score, position, and history on the server, and can be safely refreshed or resumed in the same guest pass. A solve earns 100 points plus a 50-point first-try bonus. Skips and results are shown in the post-sprint review.
+- A guest can have one active sprint at a time. Sprints and their submissions remain private to that guest; they do not affect public standings or duel records. The extra `sql-sprint` room track is added by the startup migration, so deploy the backend before depending on the new frontend route.

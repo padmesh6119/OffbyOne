@@ -30,8 +30,9 @@ try:
       INSERT INTO submissions(language,code,verdict) VALUES ('sql','SELECT 1','accepted');
       INSERT INTO rooms(join_code,name,status,track)
         SELECT status,'SQL room',status,'sql-arena' FROM unnest(ARRAY['waiting','active','intermission','finished']) status;
+      INSERT INTO rooms(join_code,name,status,track) VALUES ('SPRINT','easy','active','sql-sprint');
       DO $$ BEGIN
-        IF (SELECT count(*) FROM offbyone_migrations) <> 2 THEN RAISE EXCEPTION 'Wrong migration count'; END IF;
+        IF (SELECT count(*) FROM offbyone_migrations) <> 3 THEN RAISE EXCEPTION 'Wrong migration count'; END IF;
         IF NOT EXISTS (SELECT 1 FROM submissions WHERE language='python') THEN RAISE EXCEPTION 'Lost legacy submission'; END IF;
         IF NOT EXISTS (SELECT 1 FROM rooms WHERE status='running') THEN RAISE EXCEPTION 'Lost legacy room'; END IF;
         BEGIN

@@ -5,7 +5,7 @@ export function updateSession(values) {
 }
 export function clearSession(clearPersonal = false) {
   const name = localStorage.getItem('username');
-  if (clearPersonal && name) Object.keys(localStorage).filter(k => k.startsWith(`obo:draft:${name}:`) || k === `obo:bookmarks:${name}` || k === `obo:match:${name}`).forEach(k => localStorage.removeItem(k));
+  if (clearPersonal && name) Object.keys(localStorage).filter(k => k.startsWith(`obo:draft:${name}:`) || k.startsWith(`obo:notes:${name}:`) || k === `obo:goal:${name}` || k === `obo:bookmarks:${name}` || k === `obo:match:${name}`).forEach(k => localStorage.removeItem(k));
   keys.forEach(k => localStorage.removeItem(k));
   window.dispatchEvent(new Event('obo:session'));
 }

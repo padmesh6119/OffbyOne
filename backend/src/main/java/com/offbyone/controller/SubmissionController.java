@@ -49,7 +49,7 @@ public class SubmissionController {
             room = roomRepo.findById(UUID.fromString(body.get("roomId"))).orElse(null);
         }
 
-        if (room != null && "sql-arena".equals(room.getTrack()))
+        if (room != null && ("sql-arena".equals(room.getTrack()) || "sql-sprint".equals(room.getTrack())))
             return ResponseEntity.badRequest().body("Use the SQL arena submission endpoint.");
         if (isSql) {
             SqlProblem sqlProblem = sqlProblemBank.findBySlug(body.get("slug")).orElse(null);

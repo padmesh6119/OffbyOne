@@ -11,5 +11,6 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
     @org.springframework.data.jpa.repository.Query("select r from Room r where r.id = :id")
     Optional<Room> lockById(@org.springframework.data.repository.query.Param("id") UUID id);
     Optional<Room> findByJoinCode(String joinCode);
+    List<Room> findByHostIdAndTrackOrderByCreatedAtDesc(UUID hostId, String track);
     List<Room> findByStatus(String status);
 }

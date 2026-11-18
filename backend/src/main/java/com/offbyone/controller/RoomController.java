@@ -304,7 +304,7 @@ public class RoomController {
     }
 
     private void rejectArena(Room room) {
-        if ("sql-arena".equals(room.getTrack())) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Use the SQL arena for this match.");
+        if (("sql-arena".equals(room.getTrack()) || "sql-sprint".equals(room.getTrack()))) throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.CONFLICT, "Use the SQL arena for this match.");
     }
 
     private String generateCode() {

@@ -36,5 +36,15 @@ BEGIN
     END LOOP;
     INSERT INTO offbyone_migrations(version) VALUES ('20261101_arena_room_checks');
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM offbyone_migrations WHERE version='20261118_sql_sprints') THEN
+    FOR c IN SELECT conname, pg_get_expr(conbin, conrelid) AS expression
+      FROM pg_constraint WHERE conrelid='public.rooms'::regclass AND contype='c'
+      AND conname='rooms_track_check' LOOP
+      EXECUTE format('ALTER TABLE public.rooms DROP CONSTRAINT %I', c.conname);
+      EXECUTE format('ALTER TABLE public.rooms ADD CONSTRAINT %I CHECK ((%s) OR track = ''sql-sprint'')', c.conname, c.expression);
+    END LOOP;
+    CREATE INDEX IF NOT EXISTS rooms_host_track_created_idx ON public.rooms(host_id,track,created_at DESC);
+    INSERT INTO offbyone_migrations(version) VALUES ('20261118_sql_sprints');
+  END IF;
 END $$;
 ^^^
